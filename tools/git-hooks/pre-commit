@@ -1,0 +1,48 @@
+#!/usr/bin/env py
+# -*- coding: utf-8 -*-
+"""Pre-commit hook: syntax-check Python sources and refresh the knowledge graph.
+
+Installed via `git config core.hooksPath tools/git-hooks` so it is tracked
+in version control. Aborts the commit on syntax errors; graphify runs in a
+best-effort way (a stale graph never blocks a commit).
+"""
+
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent.parent
+SERVER_PY = ROOT / "server.py"
+TOOLS_GLOB = sorted((ROOT / "tools").glob("*.py"))
+
+
+def run(cmd):
+    return subprocess.run(cmd, capture_output=True, text=True)
+
+
+def main():
+    targets = [str(SERVER_PY)] + [str(p) for p in TOOLS_GLOB]
+    if not (SERVER_PY.exists() and targets):
+        print("pre-commit: no Python sources to check")
+        return 0
+
+    r = run([sys.executable, "-m", "py_compile"] + targets)
+    if r.returncode != 0:
+        print("pre-commit: Python syntax check FAILED")
+        print(r.stderr or r.stdout)
+        return 1
+    print("pre-commit: Python syntax OK")
+
+    try:
+        g = run(["graphify", "update", str(ROOT)])
+    except OSError:
+        print("pre-commit: graphify not available — skipping graph refresh")
+        return 0
+    if g.returncode != 0:
+        print("pre-commit: WARNING graphify update failed (not blocking)")
+        print((g.stderr or g.stdout)[-300:])
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
