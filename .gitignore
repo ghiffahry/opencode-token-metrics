@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Generated / build artifacts
+runtime/
+build/
+dist/
+
+# Local app config (auto-created, machine-specific)
+app/config.json
+
+# Graphify knowledge graph output (regenerate with: graphify update .)
+graphify-out/
+
+# Test artifacts
+.playwright-mcp/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
