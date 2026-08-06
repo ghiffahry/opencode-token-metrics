@@ -18,6 +18,7 @@ export var state = {
   liveDefaultContext: 200000,
   liveSessionSnapshot: {},
   liveFailCount: 0,
+  liveHealthOk: false,
   liveNextFull: 0,
   liveLoadSequence: 0,
   project: "(unknown)",

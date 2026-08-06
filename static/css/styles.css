@@ -587,6 +587,11 @@ body.sidebar-collapsed .status-card {
   background: var(--bg-hover);
 }
 
+.connection-pill.is-connecting {
+  color: var(--warning);
+  background: var(--warning-bg);
+}
+
 /* ---------- Buttons & inputs ---------- */
 .icon-btn {
   display: inline-grid;

@@ -159,17 +159,45 @@ def model_providers():
     return prov
 
 
-def _modelid_candidates(model):
-    """Raw message modelID values whose resolved key equals `model`."""
+_modelid_map_key = None
+_modelid_map_value = None
+
+
+def _modelid_map():
+    """Resolved model key -> set(raw message modelIDs).
+
+    One scan over the message table (rebuilt only when the DB or models.dev
+    cache changes) serves every model filter; callers that previously ran a
+    full-scan query per call now do an O(1) lookup.
+    """
+    global _modelid_map_key, _modelid_map_value
+    try:
+        key = (DB_PATH.stat().st_mtime,
+               MODELS_CACHE.stat().st_mtime if MODELS_CACHE.exists() else None)
+    except OSError:
+        key = None
+    if _modelid_map_value is not None and _modelid_map_key == key:
+        return _modelid_map_value
+    out = {}
     rows = q("SELECT DISTINCT s.model AS sm, json_extract(m.data, '$.modelID') AS mid "
              "FROM message m JOIN session s ON m.session_id = s.id "
              "WHERE json_extract(m.data, '$.role') = 'assistant' "
              "AND json_extract(m.data, '$.modelID') IS NOT NULL")
-    out = set()
     for sm, mid in rows:
-        if message_model(sm, mid) == model:
-            out.add(mid)
-    return sorted(out)
+        if not mid:
+            continue
+        out.setdefault(message_model(sm, mid), set()).add(mid)
+    _modelid_map_key = key
+    _modelid_map_value = out
+    return out
+
+
+def _modelid_candidates(model):
+    """Raw message modelID values whose resolved key equals `model`."""
+    if not model or model in ("", "(unknown)", "all", "unknown"):
+        return []
+    cands = _modelid_map().get(model)
+    return sorted(cands) if cands else []
 
 
 def _msg_model_cond(model, col="data"):
@@ -358,141 +386,97 @@ def build_buckets(range_key, cutoff, token_rows):
     return [b for _, b in days]
 
 
-def _token_query(start, end, m_sql, m_par, extra_cols=""):
-    """Message-level token rows for [start, end), scoped by msg_scope."""
-    cols = ("tokens_input, json_extract(data, '$.tokens.output') AS tokens_output"
-            + extra_cols)
-    return q("SELECT time_created, json_extract(data, '$.tokens.input') AS " + cols
-             + " FROM message WHERE time_created >= ? AND time_created < ? "
-               "AND json_extract(data, '$.role') = 'assistant' "
-               "AND json_extract(data, '$.modelID') IS NOT NULL" + m_sql,
-             (start, end) + m_par)
-
-
-def _prev_overview(range_key, project=None, model=None):
-    """Aggregate the immediately-prior window of the same length as range_key.
-
-    Used for KPI deltas and the efficiency baseline. Bounded to
-    [cutoff - ms, cutoff) so it never overlaps the current window.
-    """
-    cfg = RANGES[range_key]
-    ms = cfg["ms"]
-    end = now_ms() - ms
-    start = end - ms
-    m_sql, m_par = msg_scope(project, model)
-    p_sql, p_par = part_scope(project, model)
-
-    token_rows = _token_query(start, end, m_sql, m_par)
-    req_rows = q("SELECT 1 FROM message WHERE time_created >= ? AND time_created < ? "
-                 "AND json_extract(data, '$.role') = 'assistant' "
-                 "AND json_extract(data, '$.modelID') IS NOT NULL" + m_sql,
-                 (start, end) + m_par)
-    err_rows = q("SELECT 1 FROM part WHERE time_created >= ? AND time_created < ? AND ("
-                 "json_extract(data, '$.type') = 'error' OR "
-                 "(json_extract(data, '$.type') = 'tool' "
-                 "AND json_extract(data, '$.state.status') = 'error'))" + p_sql,
-                 (start, end) + p_par)
-    lat_rows = q("SELECT data FROM message WHERE time_created >= ? AND time_created < ? "
-                 "AND json_extract(data, '$.time.completed') IS NOT NULL" + m_sql,
-                 (start, end) + m_par)
-
-    input_t = sum(int(r["tokens_input"] or 0) for r in token_rows)
-    output_t = sum(int(r["tokens_output"] or 0) for r in token_rows)
-    requests = len(req_rows)
-    errors = len(err_rows)
-    success = max(0, requests - errors)
-    durations = [d for d in (msg_duration_seconds(r["data"]) for r in lat_rows) if d]
-    latency = (sum(durations) / len(durations)) * 1000 if durations else 0
-
-    return {
-        "requests": requests,
-        "success": success,
-        "errors": errors,
-        "successRate": (success / requests * 100) if requests else 0,
-        "input": input_t,
-        "output": output_t,
-        "total": input_t + output_t,
-        "latency": round(latency),
-        "avgIn": round(input_t / requests) if requests else 0,
-        "avgOut": round(output_t / requests) if requests else 0,
-        "ratio": (output_t / input_t) if input_t else 0,
-    }
-
-
 def overview(range_key, project=None, model=None):
     cfg = RANGES[range_key]
-    cutoff = now_ms() - cfg["ms"]
+    ms = cfg["ms"]
+    now = now_ms()
+    cutoff = now - ms
+    day_start = day_start_ms(now)
+    min1 = now - 60_000
     m_sql, m_par = msg_scope(project, model)
     p_sql, p_par = part_scope(project, model)
 
-    token_rows = _token_query(
-        cutoff, now_ms(), m_sql, m_par,
-        extra_cols=", json_extract(data, '$.tokens.reasoning') AS tokens_reasoning, "
-                   "json_extract(data, '$.tokens.cache.read') AS tokens_cache_read, "
-                   "json_extract(data, '$.cost') AS cost")
-    req_rows = q("SELECT time_created FROM message "
-                 "WHERE time_created >= ? AND json_extract(data, '$.role') = 'assistant' "
-                 "AND json_extract(data, '$.modelID') IS NOT NULL" + m_sql,
-                 (cutoff,) + m_par)
-    err_rows = q("SELECT 1 FROM part WHERE time_created >= ? AND ("
+    # One message scan over [cutoff - ms, now) yields both the current window
+    # and the prior window (`_prev_overview`), instead of ~9 separate scans
+    # that each re-parsed the same JSON columns. Only extracted columns are
+    # transferred - never the full `data` blobs.
+    rows = q(
+        "SELECT time_created, "
+        "json_extract(data, '$.tokens.input') AS tokens_input, "
+        "json_extract(data, '$.tokens.output') AS tokens_output, "
+        "json_extract(data, '$.tokens.reasoning') AS tokens_reasoning, "
+        "json_extract(data, '$.tokens.cache.read') AS tokens_cache_read, "
+        "json_extract(data, '$.cost') AS cost, "
+        "json_extract(data, '$.agent') AS agent, "
+        "json_extract(data, '$.time.completed') AS time_completed, "
+        "json_extract(data, '$.time.created') AS time_created_msg "
+        "FROM message WHERE time_created >= ? AND time_created < ? "
+        "AND json_extract(data, '$.role') = 'assistant' "
+        "AND json_extract(data, '$.modelID') IS NOT NULL" + m_sql,
+        (cutoff - ms, now) + m_par)
+    cur_rows, prev_rows = [], []
+    for r in rows:
+        (prev_rows if r["time_created"] < cutoff else cur_rows).append(r)
+
+    err_rows = q("SELECT time_created FROM part WHERE time_created >= ? AND time_created < ? AND ("
                  "json_extract(data, '$.type') = 'error' OR "
                  "(json_extract(data, '$.type') = 'tool' "
                  "AND json_extract(data, '$.state.status') = 'error'))" + p_sql,
-                 (cutoff,) + p_par)
-    lat_rows = q("SELECT data FROM message WHERE time_created >= ? "
-                 "AND json_extract(data, '$.time.completed') IS NOT NULL" + m_sql,
-                 (cutoff,) + m_par)
+                 (cutoff - ms, now) + p_par)
 
-    input_t = sum(int(r["tokens_input"] or 0) for r in token_rows)
-    output_t = sum(int(r["tokens_output"] or 0) for r in token_rows)
-    reasoning_t = sum(int(r["tokens_reasoning"] or 0) for r in token_rows)
-    cache_t = sum(int(r["tokens_cache_read"] or 0) for r in token_rows)
-    cost = sum(float(r["cost"] or 0) for r in token_rows)
-
-    durations = [d for d in (msg_duration_seconds(r["data"]) for r in lat_rows) if d]
-    latency = (sum(durations) / len(durations)) * 1000 if durations else 0
-    requests = len(req_rows)
-    errors = len(err_rows)
-    success = max(0, requests - errors)
-
-    buckets = build_buckets(range_key, cutoff, token_rows)
+    input_t = output_t = reasoning_t = cache_t = 0
+    cost = 0.0
+    requests = 0
+    durations = []
     stage_agg = {}
-    for r in q("SELECT json_extract(data, '$.agent') AS agent, "
-               "json_extract(data, '$.tokens.input') AS tokens_input, "
-               "json_extract(data, '$.tokens.output') AS tokens_output "
-               "FROM message WHERE time_created >= ? "
-               "AND json_extract(data, '$.role') = 'assistant' "
-               "AND json_extract(data, '$.modelID') IS NOT NULL" + m_sql,
-               (cutoff,) + m_par):
+    today_req = today_tokens = rpm = tpm = 0
+    for r in cur_rows:
+        tin = int(r["tokens_input"] or 0)
+        tout = int(r["tokens_output"] or 0)
+        input_t += tin
+        output_t += tout
+        reasoning_t += int(r["tokens_reasoning"] or 0)
+        cache_t += int(r["tokens_cache_read"] or 0)
+        cost += float(r["cost"] or 0)
+        requests += 1
+        tc, tm = r["time_completed"], r["time_created_msg"]
+        if tc and tm and tc > tm:
+            durations.append((tc - tm) / 1000.0)
         agent = r["agent"] or "unknown"
         g = stage_agg.setdefault(agent, {"input": 0, "output": 0})
-        g["input"] += int(r["tokens_input"] or 0)
-        g["output"] += int(r["tokens_output"] or 0)
+        g["input"] += tin
+        g["output"] += tout
+        ts = r["time_created"]
+        if ts >= day_start:
+            today_req += 1
+            today_tokens += tin + tout
+        if ts >= min1:
+            rpm += 1
+            if r["time_completed"]:
+                tpm += tin + tout
+
+    prev_input = prev_output = prev_requests = 0
+    prev_durations = []
+    for r in prev_rows:
+        tin = int(r["tokens_input"] or 0)
+        tout = int(r["tokens_output"] or 0)
+        prev_input += tin
+        prev_output += tout
+        prev_requests += 1
+        tc, tm = r["time_completed"], r["time_created_msg"]
+        if tc and tm and tc > tm:
+            prev_durations.append((tc - tm) / 1000.0)
+
+    latency = (sum(durations) / len(durations)) * 1000 if durations else 0
+    prev_latency = (sum(prev_durations) / len(prev_durations)) * 1000 if prev_durations else 0
+    errors = sum(1 for r in err_rows if r["time_created"] >= cutoff)
+    prev_errors = len(err_rows) - errors
+    success = max(0, requests - errors)
+    prev_success = max(0, prev_requests - prev_errors)
+
+    buckets = build_buckets(range_key, cutoff, cur_rows)
     stages = [{"name": k, "input": v["input"], "output": v["output"]}
               for k, v in stage_agg.items()]
-
-    today_req = q("SELECT 1 FROM message WHERE time_created >= ? "
-                  "AND json_extract(data, '$.role') = 'assistant' "
-                  "AND json_extract(data, '$.modelID') IS NOT NULL" + m_sql,
-                  (day_start_ms(now_ms()),) + m_par)
-    today_tokens = sum(int(r["tokens_input"] or 0) + int(r["tokens_output"] or 0)
-                       for r in _token_query(day_start_ms(now_ms()), now_ms(),
-                                             m_sql, m_par))
-    rpm = q("SELECT 1 FROM message WHERE time_created >= ? "
-            "AND json_extract(data, '$.role') = 'assistant' "
-            "AND json_extract(data, '$.modelID') IS NOT NULL" + m_sql,
-            (now_ms() - 60_000,) + m_par)
-    tpm_rows = q("SELECT data FROM message WHERE time_created >= ? "
-                 "AND json_extract(data, '$.role') = 'assistant' "
-                 "AND json_extract(data, '$.time.completed') IS NOT NULL" + m_sql,
-                 (now_ms() - 60_000,) + m_par)
-    tpm = 0
-    for r in tpm_rows:
-        try:
-            t = (json.loads(r["data"]).get("tokens") or {})
-            tpm += int(t.get("input") or 0) + int(t.get("output") or 0)
-        except Exception:
-            pass
 
     table_rows = buckets
     if range_key == "1d":
@@ -527,12 +511,24 @@ def overview(range_key, project=None, model=None):
         "buckets": buckets,
         "tableRows": table_rows,
         "rateLimits": {
-            "rpm": {"used": len(rpm), "limit": RATE_LIMITS["rpm"], "source": RATE_LIMIT_SOURCES["rpm"]},
+            "rpm": {"used": rpm, "limit": RATE_LIMITS["rpm"], "source": RATE_LIMIT_SOURCES["rpm"]},
             "tpm": {"used": tpm, "limit": RATE_LIMITS["tpm"], "source": RATE_LIMIT_SOURCES["tpm"]},
-            "rpd": {"used": len(today_req), "limit": RATE_LIMITS["rpd"], "source": RATE_LIMIT_SOURCES["rpd"]},
+            "rpd": {"used": today_req, "limit": RATE_LIMITS["rpd"], "source": RATE_LIMIT_SOURCES["rpd"]},
             "dtp": {"used": today_tokens, "limit": RATE_LIMITS["dtp"], "source": RATE_LIMIT_SOURCES["dtp"]},
         },
-        "prev": _prev_overview(range_key, project, model),
+        "prev": {
+            "requests": prev_requests,
+            "success": prev_success,
+            "errors": prev_errors,
+            "successRate": (prev_success / prev_requests * 100) if prev_requests else 0,
+            "input": prev_input,
+            "output": prev_output,
+            "total": prev_input + prev_output,
+            "latency": round(prev_latency),
+            "avgIn": round(prev_input / prev_requests) if prev_requests else 0,
+            "avgOut": round(prev_output / prev_requests) if prev_requests else 0,
+            "ratio": (prev_output / prev_input) if prev_input else 0,
+        },
         "notes": {"latency": "estimate from message completed-created duration",
                   "errors": "failed tool calls + 'error' parts (estimate)",
                   "requests": "assistant messages = model API calls"},
@@ -723,6 +719,7 @@ def sessions(limit=20, project=None, model=None):
 
 def requests_list(limit=50, project=None, model=None):
     frag, par = _msg_model_cond(model, col="m.data")
+    par = tuple(par)
     if frag:
         frag = " AND " + frag
     if project:
@@ -1053,7 +1050,8 @@ def handle_api(path, query):
         rng = query.get("range", ["7d"])[0]
         if rng not in RANGES:
             rng = "7d"
-        return cache_get_or("overview:%s:%s:%s" % (rng, project, model), 3,
+        ttl = 5 if not model else 15
+        return cache_get_or("overview:%s:%s:%s" % (rng, project, model), ttl,
                             lambda: overview(rng, project, model))
 
     if path == "/api/models":

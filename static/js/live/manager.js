@@ -23,6 +23,7 @@ export function liveTick() {
   fetchRealtime()
     .then(function (d) {
       state.liveFailCount = 0;
+      state.liveHealthOk = true;
       state.liveRealtime = d;
 
       var deltas = computeSessionDeltas(d.sessions);
@@ -37,7 +38,7 @@ export function liveTick() {
       renderLiveCounters();
       flashLiveCounters();
 
-      var rl = state.view.rateLimits;
+      var rl = state.view && state.view.rateLimits;
       if (rl) {
         rl.rpm.used = d.requestsLastMinute;
         rl.tpm.used = d.tokensLastMinute;
@@ -57,7 +58,10 @@ export function liveTick() {
     })
     .catch(function () {
       state.liveFailCount++;
-      setLiveStatus(false);
+      if (state.liveFailCount >= 3) {
+        state.liveHealthOk = false;
+        setLiveStatus(false);
+      }
     });
 }
 
@@ -161,7 +165,7 @@ function renderQuotaInsight(view) {
 
 export function startLive() {
   state.liveMode = true;
-  setLiveStatus(false);
+  setLiveStatus("connecting");
   clearInterval(liveTimer);
   liveTimer = setInterval(liveTick, 4000);
   bootLive();
@@ -173,8 +177,10 @@ function bootLive() {
       setDbBanner(h);
       renderDataInsight(h);
       state.dbExists = !!h.dbExists;
-      if (h && h.ok && h.dbReadable) setLiveStatus(true);
-      if (!h.dbExists) return httpJson(liveUrl("/api/context"));
+      state.liveHealthOk = !!(h && h.ok && h.dbReadable);
+      if (h && h.ok && h.dbReadable) {
+        setLiveStatus(true);
+      }
       return httpJson(liveUrl("/api/context"));
     })
     .then(function (c) {
@@ -203,13 +209,19 @@ function bootLive() {
       );
     })
     .catch(function (err) {
+      // Server unreachable or boot failed. Keep status online if the health
+      // check already succeeded this cycle, otherwise drop to offline.
+      if (state.liveHealthOk) {
+        scheduleBoot(3000);
+        return;
+      }
       setLiveStatus(false);
       var now = Date.now();
       if (now - lastToastAt > 20000) {
         lastToastAt = now;
         showToast("Live server unreachable (" + apiBase() + ") — retrying…", "error");
       }
-      scheduleBoot(5000);
+      scheduleBoot(2000);
     });
 }
 
@@ -222,11 +234,14 @@ function scheduleBoot(ms) {
 function setLiveStatus(ok) {
   var pill = $("#connectionPill");
   var text = $(".connection-pill__text", pill);
-  pill.classList.toggle("is-offline", !ok);
-  text.textContent = ok ? "Live DB" : "Offline";
-  $("#statusTitle").textContent = ok ? "Connected to opencode" : "Server offline";
-  $("#statusMeta").textContent = ok ? "reading local opencode.db" : "retrying…";
-  $("#systemStatus").classList.toggle("is-degraded", !ok);
+  var online = ok === true;
+  var connecting = ok === "connecting";
+  pill.classList.toggle("is-offline", !online && !connecting);
+  pill.classList.toggle("is-connecting", connecting);
+  text.textContent = connecting ? "Connecting…" : (online ? "Live DB" : "Offline");
+  $("#statusTitle").textContent = connecting ? "Connecting to opencode" : (online ? "Connected to opencode" : "Server offline");
+  $("#statusMeta").textContent = connecting ? "detecting local server…" : (online ? "reading local opencode.db" : "retrying…");
+  $("#systemStatus").classList.toggle("is-degraded", !online && !connecting);
 }
 
 function showToast(msg, type) {
