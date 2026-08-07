@@ -12,10 +12,14 @@ PORT = 8124
 
 
 def _base_dir():
-    """Project root; when frozen by PyInstaller use the bundle temp dir."""
+    """Project root; when frozen by PyInstaller use the bundle temp dir.
+
+    config.py lives in server_app/, so the project root is two levels up
+    (parent of the package directory).
+    """
     if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
         return Path(sys._MEIPASS)
-    return Path(__file__).resolve().parent
+    return Path(__file__).resolve().parent.parent
 
 
 def log(msg):
