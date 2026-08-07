@@ -19,7 +19,6 @@ var graphBooted = false;
 
 /* ---------------- Live polling ---------------- */
 export function liveTick() {
-  if (document.hidden) return;
   fetchRealtime()
     .then(function (d) {
       state.liveFailCount = 0;
@@ -190,6 +189,9 @@ export function startLive() {
   setLiveStatus("connecting");
   clearInterval(liveTimer);
   liveTimer = setInterval(liveTick, 4000);
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden) liveTick();
+  });
   bootLive();
 }
 
