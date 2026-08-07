@@ -21,7 +21,11 @@
     })();
   </script>
 
-  <link rel="stylesheet" href="static/css/styles.css" />
+  <link rel="stylesheet" href="static/css/base.css" />
+  <link rel="stylesheet" href="static/css/layout.css" />
+  <link rel="stylesheet" href="static/css/components.css" />
+  <link rel="stylesheet" href="static/css/responsive.css" />
+  <link rel="stylesheet" href="static/css/widgets.css" />
 
   <script src="static/vendor/chart.umd.min.js"></script>
   <script src="static/vendor/lucide.min.js"></script>
@@ -37,7 +41,7 @@
         </div>
         <div class="brand-text">
           <span class="brand-name">Token Metrics</span>
-          <span class="brand-sub">API Usage Dashboard</span>
+          <span class="brand-sub">API Usage</span>
         </div>
         <button class="icon-btn sidebar__collapse" id="sidebarCollapse" type="button" aria-label="Collapse sidebar" title="Collapse sidebar">
           <i data-lucide="panel-left-close"></i>
@@ -60,6 +64,9 @@
         </a>
         <a class="nav-item" href="#usage" data-section="usage">
           <i data-lucide="chart-line"></i><span class="nav-label">Usage Over Time</span>
+        </a>
+        <a class="nav-item" href="#context" data-section="context">
+          <i data-lucide="scan"></i><span class="nav-label">Context Usage</span>
         </a>
         <a class="nav-item" href="#agents" data-section="agents">
           <i data-lucide="layers"></i><span class="nav-label">By Agent / Stage</span>
@@ -86,7 +93,7 @@
           <span class="status-card__icon"><i data-lucide="server"></i></span>
           <div class="status-card__body">
             <span class="status-card__title" id="statusTitle">Connecting…</span>
-            <span class="status-card__meta" id="statusMeta">reading opencode.db</span>
+            <span class="status-card__meta" id="statusMeta">opencode.db</span>
           </div>
           <span class="status-card__dot" aria-hidden="true"></span>
         </div>
@@ -145,10 +152,20 @@
           </select>
         </div>
         <div class="range-group" role="radiogroup" aria-label="Time range">
-          <button class="range-btn" type="button" data-range="1d" aria-pressed="false">1D</button>
-          <button class="range-btn is-active" type="button" data-range="7d" aria-pressed="true">7D</button>
+          <button class="range-btn is-active" type="button" data-range="today" aria-pressed="true" title="Today uses the local calendar day from 00:00 until now.">Today</button>
+          <button class="range-btn" type="button" data-range="7d" aria-pressed="false">7D</button>
           <button class="range-btn" type="button" data-range="30d" aria-pressed="false">30D</button>
           <button class="range-btn" type="button" data-range="90d" aria-pressed="false">90D</button>
+          <button class="range-btn" type="button" data-range="24h" aria-pressed="false" title="Rolling window: now - 24 hours (operational, not Today)">Last 24h</button>
+          <button class="range-btn" type="button" data-range="custom" aria-pressed="false" title="Pick a custom calendar range">Custom</button>
+        </div>
+        <div class="custom-range" id="customRange" hidden>
+          <label class="custom-range__label" for="customFrom">From</label>
+          <input type="date" id="customFrom" class="custom-range__input" aria-label="Custom range start" />
+          <label class="custom-range__label" for="customTo">To</label>
+          <input type="date" id="customTo" class="custom-range__input" aria-label="Custom range end" />
+          <button class="btn btn--primary" id="customApply" type="button">Apply</button>
+          <button class="btn btn--ghost" id="customCancel" type="button">Cancel</button>
         </div>
       </div>
 
@@ -302,6 +319,77 @@
               <span class="card__meta" id="usageMeta">7 days</span>
             </div>
             <div class="chart-wrap"><canvas id="chartUsage" height="260" aria-label="Token usage over time chart" role="img"></canvas></div>
+          </div>
+        </section>
+
+        <!-- Context Usage -->
+        <section id="context" class="section">
+          <header class="section__header">
+            <h2>Context Usage</h2>
+            <span class="section__sub" id="contextSub">Context window utilisation</span>
+          </header>
+
+          <div class="grid grid--2">
+            <div class="card chart-card">
+              <div class="card__head">
+                <h3>Latest request context</h3>
+                <span class="card__meta" id="ctxLatestMeta">loading…</span>
+              </div>
+              <div class="ctx-widget" id="ctxLatest"></div>
+              <div class="empty-state" id="ctxLatestEmpty" hidden>
+                <i data-lucide="scan"></i>
+                <span class="empty-state__title">No requests in range</span>
+              </div>
+            </div>
+
+            <div class="card chart-card">
+              <div class="card__head">
+                <h3>Composition (estimated)</h3>
+                <span class="card__meta" id="ctxCompMeta">heuristic</span>
+              </div>
+              <div class="ctx-composition" id="ctxComposition"></div>
+              <p class="ctx-note" id="ctxCompNote"></p>
+            </div>
+          </div>
+
+          <div class="card table-card" style="margin-top:1rem">
+            <div class="card__head">
+              <h3>Context breakdown</h3>
+              <div class="segmented" role="radiogroup" aria-label="Context breakdown view" id="ctxSegmented">
+                <button class="segment-btn is-active" type="button" data-ctx-view="model" aria-pressed="true">By Model</button>
+                <button class="segment-btn" type="button" data-ctx-view="session" aria-pressed="false">By Session</button>
+                <button class="segment-btn" type="button" data-ctx-view="agent" aria-pressed="false">By Agent</button>
+                <button class="segment-btn" type="button" data-ctx-view="requests" aria-pressed="false">Top Requests</button>
+              </div>
+            </div>
+            <div class="table-scroll">
+              <table class="data-table" id="ctxTable" aria-describedby="Context usage breakdown by category">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th class="numeric">Requests</th>
+                    <th class="numeric">New In</th>
+                    <th class="numeric">Cached</th>
+                    <th class="numeric">Output</th>
+                    <th class="numeric">Peak</th>
+                    <th class="numeric">Window</th>
+                  </tr>
+                </thead>
+                <tbody id="ctxBody"></tbody>
+              </table>
+              <div class="empty-state" id="ctxEmpty" hidden>
+                <i data-lucide="scan"></i>
+                <span class="empty-state__title">No context data available</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card chart-card" style="margin-top:1rem">
+            <div class="card__head">
+              <h3>Conversation growth</h3>
+              <span class="card__meta" id="ctxGrowthMeta">select a session to inspect</span>
+            </div>
+            <div class="chart-wrap"><canvas id="ctxGrowth" height="200" aria-label="Conversation growth per message" role="img"></canvas></div>
           </div>
         </section>
 
@@ -488,15 +576,74 @@
               </div>
             </div>
             <div class="card chart-card" id="rpdTodayCard">
-              <div class="card__head"><h3>Usage today</h3><i class="info-icon" data-lucide="info" title="Requests and tokens actually consumed since midnight (00:00 local)." tabindex="0"></i></div>
+              <div class="card__head"><h3>Usage today</h3><i class="info-icon" data-lucide="info" title="Requests and tokens actually consumed since 00:00 local calendar day." tabindex="0"></i></div>
               <div class="rate-limit">
                 <div class="rate-limit__value"><span class="rate-limit__used" id="todayRequests">0</span></div>
                 <div class="rate-limit__label">requests today</div>
                 <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
                   <span class="progress__bar" id="todayBar" style="width:0%"></span>
                 </div>
-                <div class="rate-limit__foot"><span class="status-badge" id="todayBadge">24h window</span><span class="rate-limit__pct" id="todayTokens">0 tokens</span></div>
+                <div class="rate-limit__foot"><span class="status-badge" id="todayBadge">today</span><span class="rate-limit__pct" id="todayTokens">0 tokens</span></div>
               </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Daily Budget -->
+        <section id="budget" class="section">
+          <header class="section__header">
+            <h2>Daily Budget</h2>
+            <span class="section__sub" id="budgetSub">Usage today vs. configured target</span>
+          </header>
+
+          <div class="grid grid--3">
+            <div class="card chart-card">
+              <div class="card__head"><h3>Budget target</h3><i class="info-icon" data-lucide="info" title="Daily token budget. Set TOKENMETRICS_DAILY_BUDGET to pin a value; otherwise a default estimate is used." tabindex="0"></i></div>
+              <div class="budget-target" id="budgetTarget"></div>
+            </div>
+            <div class="card chart-card">
+              <div class="card__head"><h3>Usage today</h3><i class="info-icon" data-lucide="info" title="Actual input + output tokens since 00:00 (calendar day) vs. the budget." tabindex="0"></i></div>
+              <div class="rate-limit" data-limit="budget">
+                <div class="rate-limit__value"><span class="rate-limit__used" id="budgetUsed">0</span><span class="rate-limit__sep">/</span><span class="rate-limit__limit" id="budgetLimit">?</span></div>
+                <div class="rate-limit__label">tokens / day · <span id="budgetRemaining">unknown</span> remaining</div>
+                <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                  <span class="progress__bar" id="budgetBar" style="width:0%"></span>
+                </div>
+                <div class="rate-limit__foot"><span class="status-badge" id="budgetBadge">OK</span><span class="rate-limit__pct" id="budgetPct">0%</span></div>
+              </div>
+            </div>
+            <div class="card chart-card">
+              <div class="card__head"><h3>Projection</h3><i class="info-icon" data-lucide="info" title="Extrapolated end-of-day usage if the current rate continues." tabindex="0"></i></div>
+              <div class="budget-projection" id="budgetProjection"></div>
+            </div>
+          </div>
+
+          <div class="card chart-card" style="margin-top:1rem">
+            <div class="card__head">
+              <h3>Daily usage vs. budget</h3>
+              <span class="card__meta" id="budgetChartMeta">last 14 days</span>
+            </div>
+            <div class="chart-wrap"><canvas id="budgetChart" height="240" aria-label="Daily token usage vs budget chart" role="img"></canvas></div>
+          </div>
+
+          <div class="card table-card" style="margin-top:1rem">
+            <div class="card__head"><h3>Daily history</h3></div>
+            <div class="table-scroll">
+              <table class="data-table" id="budgetTable" aria-describedby="Daily token usage against the budget">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th class="numeric">Requests</th>
+                    <th class="numeric">Input</th>
+                    <th class="numeric">Output</th>
+                    <th class="numeric">Tokens</th>
+                    <th class="numeric">Budget</th>
+                    <th class="numeric">Delta</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="budgetBody"></tbody>
+              </table>
             </div>
           </div>
         </section>

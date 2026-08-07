@@ -1,7 +1,7 @@
 /* Singleton mutable state shared across all modules. */
 
 export var state = {
-  range: "7d",
+  range: "today",
   view: null,
   page: 1,
   pageSize: 10,
@@ -22,9 +22,16 @@ export var state = {
   liveNextFull: 0,
   liveLoadSequence: 0,
   project: "(unknown)",
-  projects: []
+  projects: [],
+  customFrom: "",
+  customTo: "",
+  contextUsage: null,
+  budget: null,
+  contextView: "model"
 };
 
 export var liveRangeCache = new Map();
+export var liveContextCache = new Map();
+export var liveBudgetCache = new Map();
 
 export var chartRegistry = { generation: null, api: null, usage: null, stages: null, realtime: null, sparks: {} };

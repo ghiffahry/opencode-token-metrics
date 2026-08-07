@@ -1,6 +1,6 @@
 /* Live backend access: HTTP helpers, project list/filter, view assembly, polling. */
 
-import { state, liveRangeCache } from "../core/state.js";
+import { state, liveRangeCache, liveContextCache, liveBudgetCache } from "../core/state.js";
 import { $, esc } from "../core/utils.js";
 import { weeklyGroup } from "../data/derive.js";
 import { renderKpis, renderSparks } from "../render/kpis.js";
@@ -8,6 +8,8 @@ import { renderEfficiency } from "../render/efficiency.js";
 import { renderBarCharts, renderUsageChart, renderStagesChart } from "../render/charts.js";
 import { renderModelTable, renderRequests, renderPerDay, renderSessionTable, renderRateLimits } from "../render/tables.js";
 import { renderLiveCounters } from "../render/realtime.js";
+import { renderContext, renderContextGrowth } from "../render/context.js";
+import { renderBudget } from "../render/budget.js";
 
 var LIVE_PORT = 8124;
 
@@ -45,6 +47,10 @@ function scopeQuery() {
   var parts = [];
   if (state.project && state.project !== "(unknown)") parts.push("project=" + encodeURIComponent(state.project));
   if (state.modelFilter && state.modelFilter !== "all") parts.push("model=" + encodeURIComponent(state.modelFilter));
+  if (state.range === "custom") {
+    if (state.customFrom) parts.push("from=" + encodeURIComponent(state.customFrom));
+    if (state.customTo) parts.push("to=" + encodeURIComponent(state.customTo));
+  }
   return parts.join("&");
 }
 
@@ -112,6 +118,8 @@ function liveViewFrom(o, m) {
     source: "live",
     range: o.range,
     rangeLabel: o.rangeLabel,
+    rangeDetail: o.rangeDetail,
+    timezone: o.timezone,
     models: (m.models || []).map(function (x) {
       return {
         id: x.id,
@@ -159,13 +167,59 @@ function renderLiveAll(view) {
   renderModelTable(view);
   renderRequests();
   renderPerDay(view);
-  $("#overviewSub").textContent = projectLabel(state.project) + " · " + view.rangeLabel;
+  renderContext(state.contextUsage);
+  renderBudget(state.budget);
+  $("#overviewSub").textContent = rangeTitle(state.project, view);
   $("#modelsSub").textContent = "Aggregated · " + view.rangeLabel;
   $("#limitsSub").textContent = "Live quota utilisation";
 }
 
+export function rangeTitle(project, view) {
+  var label = projectLabel(project) + " · " + (view.rangeLabel || "");
+  if (view.rangeDetail) label += " · " + view.rangeDetail;
+  return label;
+}
+
+export function loadContextUsage(rangeKey) {
+  var cacheKey = [rangeKey, state.project || "", state.modelFilter || "all",
+                  state.customFrom || "", state.customTo || ""].join("|");
+  var cached = liveContextCache.get(cacheKey);
+  if (cached && Date.now() - cached.time < 15000) {
+    state.contextUsage = cached.data;
+    renderContext(state.contextUsage);
+    return Promise.resolve(cached.data);
+  }
+  return httpJson(apiUrl("/api/context_usage?range=" + rangeKey), 60000)
+    .then(function (d) {
+      liveContextCache.set(cacheKey, { time: Date.now(), data: d });
+      state.contextUsage = d;
+      renderContext(d);
+      return d;
+    })
+    .catch(function () {});
+}
+
+export function loadBudget() {
+  var cacheKey = [state.project || "", state.modelFilter || "all"].join("|");
+  var cached = liveBudgetCache.get(cacheKey);
+  if (cached && Date.now() - cached.time < 10000) {
+    state.budget = cached.data;
+    renderBudget(state.budget);
+    return Promise.resolve(cached.data);
+  }
+  return httpJson(apiUrl("/api/budget"), 20000)
+    .then(function (d) {
+      liveBudgetCache.set(cacheKey, { time: Date.now(), data: d });
+      state.budget = d;
+      renderBudget(d);
+      return d;
+    })
+    .catch(function () {});
+}
+
 export function loadLiveRange(rangeKey) {
-  var cacheKey = [rangeKey, state.project || "", state.modelFilter || "all"].join("|");
+  var cacheKey = [rangeKey, state.project || "", state.modelFilter || "all",
+                  state.customFrom || "", state.customTo || ""].join("|");
   var cached = liveRangeCache.get(cacheKey);
   if (cached && Date.now() - cached.time < 15000) {
     applyLiveRange(cached.data);
@@ -175,11 +229,13 @@ export function loadLiveRange(rangeKey) {
   return Promise.all([
     httpJson(apiUrl("/api/overview?range=" + rangeKey), 60000),
     httpJson(apiUrl("/api/models?range=" + rangeKey), 60000),
-    httpJson(apiUrl("/api/requests?limit=60"), 30000)
+    httpJson(apiUrl("/api/requests?limit=60"), 30000),
+    httpJson(apiUrl("/api/context_usage?range=" + rangeKey), 60000)
   ]).then(function (res) {
     if (requestSequence !== state.liveLoadSequence) return res[0];
     liveRangeCache.set(cacheKey, { time: Date.now(), data: res });
     applyLiveRange(res);
+    loadBudget();
     return res[0];
   });
 }
@@ -194,6 +250,7 @@ function applyLiveRange(res) {
     state.page = 1;
     state.live = { input: 0, output: 0, streamIn: [], streamOut: [], streamLabels: [] };
     state.liveSessionSnapshot = {};
+    state.contextUsage = res[3];
     populateFilters(state.view);
     renderLiveAll(state.view);
     renderSessionTable();
@@ -204,9 +261,11 @@ function applyLiveRange(res) {
 export function refreshLiveRange() {
   return Promise.all([
     httpJson(apiUrl("/api/overview?range=" + state.range), 60000),
-    httpJson(apiUrl("/api/models?range=" + state.range), 60000)
+    httpJson(apiUrl("/api/models?range=" + state.range), 60000),
+    httpJson(apiUrl("/api/context_usage?range=" + state.range), 60000)
   ]).then(function (res) {
     state.view = liveViewFrom(res[0], res[1]);
+    state.contextUsage = res[2];
     renderKpis(state.view);
     renderEfficiency(state.view);
     renderBarCharts(state.view);
@@ -215,6 +274,9 @@ export function refreshLiveRange() {
     renderModelTable(state.view);
     renderRequests();
     renderPerDay(state.view);
+    renderContext(state.contextUsage);
+    loadBudget();
+    $("#overviewSub").textContent = rangeTitle(state.project, state.view);
   }).catch(function () {});
 }
 

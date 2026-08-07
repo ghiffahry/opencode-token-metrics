@@ -239,8 +239,8 @@ function setLiveStatus(ok) {
   pill.classList.toggle("is-offline", !online && !connecting);
   pill.classList.toggle("is-connecting", connecting);
   text.textContent = connecting ? "Connecting…" : (online ? "Live DB" : "Offline");
-  $("#statusTitle").textContent = connecting ? "Connecting to opencode" : (online ? "Connected to opencode" : "Server offline");
-  $("#statusMeta").textContent = connecting ? "detecting local server…" : (online ? "reading local opencode.db" : "retrying…");
+  $("#statusTitle").textContent = connecting ? "Connecting" : (online ? "Connected" : "Server offline");
+  $("#statusMeta").textContent = connecting ? "detecting server" : (online ? "opencode.db" : "retrying");
   $("#systemStatus").classList.toggle("is-degraded", !online && !connecting);
 }
 

@@ -14,9 +14,15 @@ dashboard-token/
 │   ├── config.json          #   Desktop config (dbPath, window size, port) - auto-created
 │   └── app.ico              #   Window / exe icon
 ├── index.html               # Dashboard markup (loads static/js/main.js as an ES module)
-├── server.py                # Local API bridge (Python stdlib, no dependencies)
+├── server.py                # Local API bridge (thin shim; logic lives in server_app/)
+├── server_app/              # Bridge package: config, db, ranges, estimates, overview, context, routes, httpd
 ├── static/
-│   ├── css/styles.css       # Styling (dark/light theme)
+│   ├── css/
+│   │   ├── base.css         # Theme tokens, reset & base
+│   │   ├── layout.css       # App layout, sidebar, topbar
+│   │   ├── components.css   # Buttons, cards, tables, badges, footer, toast, ...
+│   │   ├── responsive.css   # Media queries & reduced motion
+│   │   └── widgets.css      # Context-usage widget, daily budget, custom range picker
 │   ├── favicon.svg          # Dashboard favicon
 │   ├── vendor/              # Offline copies of Chart.js, lucide, vis-network (no CDN)
 │   └── js/
@@ -160,14 +166,20 @@ Base URL: `http://127.0.0.1:8124` (dev server; the desktop app uses a random por
 | `GET /api/projects` | Real project directories found in the database |
 | `GET /api/overview?range=7d` | Aggregates: requests, tokens, latency, success rate, stages, daily buckets, rate limits |
 | `GET /api/models?range=7d` | Per-model aggregation incl. `contextLimit` / `contextUsed` |
+| `GET /api/context_usage?range=7d` | Context window usage: latest request (input/cached/output/reasoning vs limit), peak, per-model/session/agent aggregates, recent requests, estimated composition of the latest request |
+| `GET /api/budget` | Daily budget: today's usage vs `TOKENMETRICS_DAILY_BUDGET`, projection, 14-day history |
 | `GET /api/sessions?limit=50` | Session list (id, title, model, tokens, status, latency) |
 | `GET /api/requests?limit=60` | Latest requests (id, model, agent, tokens, latency, status, time) |
 | `GET /api/realtime` | Watermark + active sessions, RPM/TPM (last 1 min), tokens today |
 | `GET /api/graph` | Knowledge graph from `graphify-out/graph.json` (see Knowledge Graph section below) |
 
-`range` values: `1d`, `7d`, `30d`, `90d` (default `7d`).
+`range` values: `today`, `7d`, `30d`, `90d` (calendar ranges, default `today`), `24h` (rolling window: now − 24 h), and `custom` (requires `from=YYYY-MM-DD&to=YYYY-MM-DD`, both inclusive; dates are clamped to today). Calendar boundaries use `TOKENMETRICS_TZ` (default `Asia/Jakarta`); the database itself stays UTC epoch ms.
 
 **Project filter:** `overview`, `models`, `sessions`, `requests`, and `realtime` accept `?project=<directory>` (URL-encoded) to restrict results to a single project directory, e.g. `GET /api/overview?project=D:/Apps/AI/Project/dashboard-token`. Use `GET /api/projects` to list valid values.
+
+**Context usage:** `tokens.total == input + output + reasoning + cache.read` in the database, but no per-category attribution is stored, so the composition breakdown is an explicit **estimated** heuristic (splits only the real input total of the latest request across categories read from the workspace files; it never invents tokens). Everything else (window utilisation, peaks, aggregates) is actuals from the database.
+
+**Daily budget:** `TOKENMETRICS_DAILY_BUDGET` (tokens/day) pins the target (labelled `configured`); unset, the default estimate `400_000` is used and labelled `default`. The projection extrapolates today's rate to end of day.
 
 Responses are JSON, cached briefly server-side (overview 3 s, models 5 s, sessions/requests 2 s, realtime 1.5 s).
 
@@ -192,7 +204,7 @@ The dashboard sidebar has a **Knowledge Graph** section that visualizes the code
 
 **Desktop (`app\config.json`)** - created automatically next to `desktop.py` on first run: `dbPath` (default `~/.local/share/opencode/opencode.db`), `host`/`port` (default `127.0.0.1` / `0` = random free port), `width`/`height`/`minWidth`/`minHeight`.
 
-**Dev server (`server.py`)** - edit the constants at the top:
+**Dev server (`server.py`)** - constants live at the top of `server_app/config.py`:
 
 | Constant | Default | Purpose |
 | --- | --- | --- |
@@ -203,7 +215,9 @@ The dashboard sidebar has a **Knowledge Graph** section that visualizes the code
 | `DEFAULT_CONTEXT` | `200_000` | Fallback context limit when a model is unknown |
 | `ACTIVE_WINDOW_MS` | `5 * 60_000` | Session counts as *active* if updated within 5 minutes |
 | `TOKENMETRICS_RPM`, `TOKENMETRICS_TPM`, `TOKENMETRICS_RPD`, `TOKENMETRICS_DTP` | unset (falls back to estimates) | Verified quotas. OpenCode's local DB does not expose provider/account limits, so unset values use community estimates (`60` / `250000` / `200` / `400000`, editable in `RATE_LIMIT_DEFAULTS`) and are labelled `Estimated default`; set a `TOKENMETRICS_*` env var to pin a verified limit (labelled `configured`) |
-| `RANGES` | `1d/7d/30d/90d` | Aggregation windows and bucket counts |
+| `TOKENMETRICS_TZ` | `Asia/Jakarta` | Timezone for calendar day boundaries (`today`, daily budget, per-day buckets). Requires Python 3.9+ (`zoneinfo`); older Pythons fall back to local time |
+| `TOKENMETRICS_DAILY_BUDGET` | `400_000` (`DAILY_BUDGET_DEFAULT`) | Daily token budget for the Daily Budget section; `configured` when set, otherwise `default` |
+| `RANGES` | `today/7d/30d/90d` (+ `24h`, `custom`) | Aggregation windows and bucket counts |
 
 KPI deltas and the efficiency baseline are computed from the immediately-prior window of the same length (`_prev_overview`), never from hardcoded constants.
 
@@ -217,7 +231,7 @@ KPI deltas and the efficiency baseline are computed from the immediately-prior w
 | Desktop window fails with a WebView2 error | Install the Microsoft Edge WebView2 runtime (https://developer.microsoft.com/microsoft-edge/webview2/). |
 | `pywebview` import error | `py -m pip install pywebview`. |
 | "Server unreachable" banner | The embedded/dev server is down. Restart the app, or for the dev server run `py server.py`. |
-| Wrong context limits for a model | Add the model id to `MODEL_CONTEXT_OVERRIDES` in `server.py` and restart. |
+| Wrong context limits for a model | Add the model id to `MODEL_CONTEXT_OVERRIDES` in `server_app/config.py` and restart. |
 | Counts look small / zero | The current opencode user likely has few or no assistant messages in the selected range - try `90d`. |
 | Port 8124 already in use | Pick another port with `--port`. |
 | Graph section empty | Run `graphify update .` (or `graphify extract . --code-only`) and press Refresh in the dashboard. |

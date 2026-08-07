@@ -176,8 +176,9 @@ export function renderUsageChart(view) {
     options: opt
   });
 
-  $("#usageMeta").textContent = view.range === "1d" ? "24 hours" : view.range === "90d" ? "13 weeks" : view.rangeLabel;
-  $("#usageSub").textContent = view.range === "1d" ? "Hourly" : view.range === "90d" ? "Weekly" : "Daily";
+  var hourly = view.range === "today" || view.range === "24h";
+  $("#usageMeta").textContent = view.range === "today" ? "Since 00:00" : view.range === "24h" ? "Last 24 hours" : view.range === "90d" ? "13 weeks" : view.rangeLabel;
+  $("#usageSub").textContent = hourly ? "Hourly" : view.range === "90d" ? "Weekly" : "Daily";
 }
 
 export function renderStagesChart(view) {

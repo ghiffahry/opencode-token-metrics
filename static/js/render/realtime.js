@@ -19,7 +19,7 @@ export function renderLiveCounters() {
   var cards = [
     { label: "Active sessions", value: String(rt.activeSessions), foot: "+" + formatTokens(lastTick) + " last poll", icon: "layers" },
     { label: "Requests today", value: nf.format(rt.today.requests || 0), foot: "since 00:00", icon: "clock" },
-    { label: "Tokens today", value: formatTokens(todayTotal), foot: "live · " + formatTokens(lastTick) + " since load", icon: "calendar-days" },
+    { label: "Tokens today", value: formatTokens(todayTotal), foot: "live · since 00:00", icon: "calendar-days" },
     { label: "RPM · 1 min", value: nf.format(rt.requestsLastMinute), foot: "of " + nf.format(rpmLimit), icon: "gauge" },
     { label: "TPM · 1 min", value: formatTokens(rt.tokensLastMinute), foot: "of " + formatTokens(tpmLimit), icon: "zap" }
   ];

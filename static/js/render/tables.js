@@ -105,7 +105,7 @@ export function renderPerDay(view) {
       "</tr>"
     );
   }).join("");
-  $("#perDayMeta").textContent = view.range === "1d" ? "Today" : rows.length + " days";
+  $("#perDayMeta").textContent = (view.range === "today" || view.range === "24h") ? "Today" : rows.length + " days";
 }
 
 export function getFilteredRequests() {

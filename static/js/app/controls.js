@@ -5,9 +5,15 @@ import { $, $all, icons } from "../core/utils.js";
 import { exportCSV } from "../data/csv.js";
 import { renderModelTable, renderRequests } from "../render/tables.js";
 import { renderGraph, refreshGraphTheme } from "../render/graph.js";
-import { selectRange } from "./render.js";
+import { selectRange, updateRangeButtons } from "./render.js";
 import { liveTick, refreshLiveChartTheme } from "../live/manager.js";
 import { loadLiveRange, projectLabel } from "../live/api.js";
+
+function toISODate(d) {
+  var m = String(d.getMonth() + 1).padStart(2, "0");
+  var day = String(d.getDate()).padStart(2, "0");
+  return d.getFullYear() + "-" + m + "-" + day;
+}
 
 function applyTheme(theme) {
   document.documentElement.setAttribute("data-theme", theme);
@@ -57,9 +63,57 @@ export function initControls() {
     });
   });
 
+  var lastNonCustom = "today";
   $all(".range-btn").forEach(function (b) {
-    b.addEventListener("click", function () { selectRange(b.getAttribute("data-range")); });
+    b.addEventListener("click", function () {
+      var rk = b.getAttribute("data-range");
+      if (rk === "custom") {
+        if (!$("#customFrom").value || !$("#customTo").value) {
+          var toD = new Date();
+          var fromD = new Date(toD.getTime() - 6 * 86400000);
+          $("#customFrom").value = toISODate(fromD);
+          $("#customTo").value = toISODate(toD);
+        }
+        $("#customRange").hidden = false;
+        return;
+      }
+      lastNonCustom = rk;
+      $("#customRange").hidden = true;
+      selectRange(rk);
+    });
   });
+
+  $("#customApply").addEventListener("click", function () {
+    var from = $("#customFrom").value;
+    var to = $("#customTo").value;
+    if (!from || !to) return;
+    var fromD = new Date(from + "T00:00:00");
+    var toD = new Date(to + "T00:00:00");
+    if (fromD > toD) { fromD = toD; from = to; }
+    var todayIso = toISODate(new Date());
+    if (to > todayIso) { to = todayIso; toD = new Date(to + "T00:00:00"); }
+    if (fromD > toD) from = to;
+    state.customFrom = from;
+    state.customTo = to;
+    try {
+      localStorage.setItem("customFrom", from);
+      localStorage.setItem("customTo", to);
+    } catch (e) {}
+    $("#customRange").hidden = true;
+    selectRange("custom");
+  });
+
+  $("#customCancel").addEventListener("click", function () {
+    $("#customRange").hidden = true;
+    if (state.range !== "custom") updateRangeButtons(lastNonCustom);
+  });
+
+  try {
+    state.customFrom = localStorage.getItem("customFrom") || "";
+    state.customTo = localStorage.getItem("customTo") || "";
+    if (state.customFrom) $("#customFrom").value = state.customFrom;
+    if (state.customTo) $("#customTo").value = state.customTo;
+  } catch (e) {}
 
   $("#projectSelect").addEventListener("change", function () {
     state.project = this.value;

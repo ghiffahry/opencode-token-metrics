@@ -1,0 +1,208 @@
+/* ============================================================
+   Token Metrics - API Usage Dashboard
+   Design system: CSS custom properties, light/dark themes,
+   responsive components. Vanilla CSS only.
+   ============================================================ */
+
+/* ==== base ==== */
+/* Theme tokens, reset & base */
+
+/* ---------- Theme tokens ---------- */
+:root {
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+
+  /* radii */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  /* layout */
+  --sidebar-width: 240px;
+  --sidebar-collapsed-width: 72px;
+  --topbar-height: 64px;
+  --content-max: 1440px;
+
+  /* type */
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-md: 15px;
+  --text-lg: 17px;
+  --text-xl: 19px;
+  --text-display: 28px;
+
+  /* transitions */
+  --transition-fast: 150ms ease;
+  --transition-base: 220ms ease;
+}
+
+:root[data-theme="light"] {
+  --bg-app: #f2f6fc;
+  --bg-app-gradient: radial-gradient(1200px 600px at 85% -10%, #dbe7fb 0%, transparent 55%),
+    radial-gradient(900px 500px at -10% 0%, #e6f0fb 0%, transparent 50%),
+    linear-gradient(180deg, #eef3fa 0%, #f6f8fb 100%);
+  --bg-sidebar: #ffffff;
+  --bg-surface: #ffffff;
+  --bg-surface-raised: #ffffff;
+  --bg-hover: #f1f3f4;
+  --bg-active: #e8f0fe;
+  --bg-inset: #f8f9fa;
+  --bg-glass: rgba(255, 255, 255, 0.72);
+
+  --text-primary: #202124;
+  --text-secondary: #5f6368;
+  --text-tertiary: #9aa0a6;
+  --text-on-accent: #ffffff;
+
+  --border: #e1e4e8;
+  --border-strong: #d0d5db;
+
+  --accent: #3a6ea5;
+  --accent-hover: #335f8e;
+  --accent-soft: #e6edf5;
+  --accent-contrast: #2d5988;
+
+  --success: #15805d;
+  --success-bg: #e1f0e9;
+  --warning: #b7791f;
+  --warning-bg: #faf0da;
+  --danger: #c94a46;
+  --danger-bg: #f9e8e7;
+  --info: #3a6ea5;
+  --info-bg: #e6edf5;
+
+  --chart-input: #146c72;
+  --chart-input-border: #0e555a;
+  --chart-output: #3a6ea5;
+  --chart-output-border: #2d5988;
+  --chart-grid: rgba(71, 85, 105, 0.1);
+  --chart-axis: #64748b;
+  --chart-tooltip-bg: #172033;
+
+  --shadow-card: 0 1px 2px rgba(60, 64, 67, 0.08), 0 2px 8px rgba(60, 64, 67, 0.06);
+  --shadow-card-hover: 0 2px 6px rgba(60, 64, 67, 0.12), 0 6px 20px rgba(60, 64, 67, 0.1);
+  --shadow-pop: 0 8px 28px rgba(60, 64, 67, 0.16);
+
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --bg-app: #111315;
+  --bg-app-gradient: radial-gradient(1200px 600px at 85% -10%, rgba(138, 180, 248, 0.07) 0%, transparent 55%),
+    radial-gradient(900px 500px at -10% 0%, rgba(138, 180, 248, 0.05) 0%, transparent 50%),
+    linear-gradient(180deg, #111315 0%, #141619 100%);
+  --bg-sidebar: #17191b;
+  --bg-surface: #1c1f22;
+  --bg-surface-raised: #22262a;
+  --bg-hover: #23272b;
+  --bg-active: #1e293b;
+  --bg-inset: #181b1e;
+  --bg-glass: rgba(28, 31, 34, 0.78);
+
+  --text-primary: #e8eaed;
+  --text-secondary: #9aa0a6;
+  --text-tertiary: #5f6368;
+  --text-on-accent: #111315;
+
+  --border: #2b2f33;
+  --border-strong: #3c4043;
+
+  --accent: #70a7d8;
+  --accent-hover: #8bb8e0;
+  --accent-soft: #1e293b;
+  --accent-contrast: #9cc6e8;
+
+  --success: #54c59a;
+  --success-bg: #142b22;
+  --warning: #e4b64e;
+  --warning-bg: #33291a;
+  --danger: #ef817b;
+  --danger-bg: #3a201f;
+  --info: #70a7d8;
+  --info-bg: #1e293b;
+
+  --chart-input: #45b8b0;
+  --chart-input-border: #76d4ce;
+  --chart-output: #70a7d8;
+  --chart-output-border: #9cc6e8;
+  --chart-grid: rgba(148, 163, 184, 0.1);
+  --chart-axis: #8b98a8;
+  --chart-tooltip-bg: #252a30;
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.25);
+  --shadow-card-hover: 0 2px 6px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-pop: 0 10px 32px rgba(0, 0, 0, 0.5);
+
+  color-scheme: dark;
+}
+
+/* ---------- Reset & base ---------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  color: var(--text-primary);
+  background-color: var(--bg-app);
+  background-image: var(--bg-app-gradient);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4, p {
+  margin: 0;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+input, select, button {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img, svg {
+  display: block;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--text-primary);
+}
+
+

@@ -7,8 +7,10 @@ import { renderEfficiency } from "../render/efficiency.js";
 import { renderBarCharts, renderUsageChart, renderStagesChart } from "../render/charts.js";
 import { renderModelTable, renderRequests, renderPerDay, renderSessionTable, renderRateLimits } from "../render/tables.js";
 import { renderLiveCounters } from "../render/realtime.js";
+import { renderContext } from "../render/context.js";
+import { renderBudget } from "../render/budget.js";
 import { renderGraph } from "../render/graph.js";
-import { loadLiveRange, projectLabel } from "../live/api.js";
+import { loadLiveRange, rangeTitle } from "../live/api.js";
 
 export function updateRangeButtons(rangeKey) {
   $all(".range-btn").forEach(function (b) {
@@ -31,10 +33,12 @@ export function renderAll() {
   renderSessionTable();
   renderRateLimits(view);
   renderLiveCounters();
+  renderContext(state.contextUsage);
+  renderBudget(state.budget);
   renderGraph();
 
-  $("#overviewSub").textContent = projectLabel(state.project) + " · " + view.rangeLabel;
-  $("#usageSub").textContent = view.range === "1d" ? "Hourly" : view.range === "90d" ? "Weekly" : "Daily";
+  $("#overviewSub").textContent = rangeTitle(state.project, view);
+  $("#usageSub").textContent = (view.range === "today" || view.range === "24h") ? "Hourly" : "Daily";
   $("#modelsSub").textContent = "Aggregated · " + view.rangeLabel;
   $("#limitsSub").textContent = "Live quota utilisation";
   $("#footerStamp").textContent = "Updated " + formatTime(new Date());

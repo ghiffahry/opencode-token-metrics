@@ -76,9 +76,9 @@ def main():
 
     db_path = (cfg.get("dbPath") or "").strip()
     if db_path:
-        server.DB_PATH = Path(db_path)
-    if not server.DB_PATH.exists():
-        server.log("WARNING: opencode database not found: %s" % server.DB_PATH)
+        server.set_db_path(db_path)
+    if not server.db_path().exists():
+        server.log("WARNING: opencode database not found: %s" % server.db_path())
 
     srv, port = server.make_server(cfg.get("host", "127.0.0.1"), int(cfg.get("port", 0)))
     thread = threading.Thread(target=srv.serve_forever, daemon=True)
