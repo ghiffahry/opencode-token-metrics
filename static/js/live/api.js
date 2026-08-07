@@ -10,6 +10,7 @@ import { renderModelTable, renderRequests, renderPerDay, renderSessionTable, ren
 import { renderLiveCounters } from "../render/realtime.js";
 import { renderContext, renderContextGrowth } from "../render/context.js";
 import { renderBudget } from "../render/budget.js";
+import { updateChips } from "../ui/chips.js";
 
 var LIVE_PORT = 8124;
 
@@ -256,6 +257,7 @@ function applyLiveRange(res) {
     renderSessionTable();
     renderRateLimits(state.view);
     renderLiveCounters();
+    updateChips();
 }
 
 export function refreshLiveRange() {
@@ -299,6 +301,7 @@ export function populateFilters(view) {
     ? curAgent : "all";
   modelSel.value = state.modelFilter;
   agentSel.value = state.agentFilter;
+  updateChips();
 }
 
 export function snapshotSessions(list) {

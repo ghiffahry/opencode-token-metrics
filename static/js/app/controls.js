@@ -2,9 +2,12 @@
 
 import { state } from "../core/state.js";
 import { $, $all, icons } from "../core/utils.js";
-import { exportCSV } from "../data/csv.js";
+import { exportCSV, exportJSON, exportPNG, exportSummary } from "../data/export.js";
 import { renderModelTable, renderRequests } from "../render/tables.js";
 import { renderGraph, refreshGraphTheme } from "../render/graph.js";
+import { setStreamWindow } from "../render/charts.js";
+import { openSessionDrawer } from "../ui/sessionDrawer.js";
+import { updateChips } from "../ui/chips.js";
 import { selectRange, updateRangeButtons } from "./render.js";
 import { liveTick, refreshLiveChartTheme } from "../live/manager.js";
 import { loadLiveRange, projectLabel } from "../live/api.js";
@@ -115,15 +118,134 @@ export function initControls() {
     if (state.customTo) $("#customTo").value = state.customTo;
   } catch (e) {}
 
+  $("#refreshBtn").addEventListener("click", doRefresh);
+  $("#bannerRetry").addEventListener("click", doRefresh);
+
+  /* ---------------- Export menu ---------------- */
+  var exportMenuEl = $("#exportMenu");
+  function refreshExportSummary() {
+    var s = exportSummary();
+    var pe = $("#exportPeriod");
+    if (pe) pe.textContent = s.period;
+    var fe = $("#exportFilters");
+    if (fe) fe.textContent = s.filters;
+  }
+  $("#exportBtn").addEventListener("click", function (e) {
+    e.stopPropagation();
+    var open = exportMenuEl.hidden;
+    exportMenuEl.hidden = !open;
+    this.setAttribute("aria-expanded", String(!open));
+    if (!open) refreshExportSummary();
+  });
+  document.addEventListener("click", function (e) {
+    if (!e.target.closest(".export-wrap")) exportMenuEl.hidden = true;
+  });
+  $all("[data-export]", exportMenuEl).forEach(function (b) {
+    b.addEventListener("click", function () {
+      var kind = b.getAttribute("data-export");
+      if (kind === "csv") exportCSV();
+      else if (kind === "json") exportJSON();
+      else if (kind === "png") exportPNG();
+      exportMenuEl.hidden = true;
+    });
+  });
+
+  /* ---------------- Custom range presets ---------------- */
+  $all("[data-preset]", $("#customPresets")).forEach(function (b) {
+    b.addEventListener("click", function () {
+      var p = b.getAttribute("data-preset");
+      var toD = new Date();
+      var fromD;
+      if (p === "today") fromD = new Date(toD.getFullYear(), toD.getMonth(), toD.getDate());
+      else if (p === "yesterday") { fromD = new Date(toD.getFullYear(), toD.getMonth(), toD.getDate() - 1); toD = new Date(fromD); }
+      else if (p === "7d") fromD = new Date(toD.getTime() - 6 * 86400000);
+      else if (p === "30d") fromD = new Date(toD.getTime() - 29 * 86400000);
+      else if (p === "month") fromD = new Date(toD.getFullYear(), toD.getMonth(), 1);
+      else if (p === "prevmonth") { fromD = new Date(toD.getFullYear(), toD.getMonth() - 1, 1); toD = new Date(toD.getFullYear(), toD.getMonth(), 0); }
+      state.customFrom = toISODate(fromD);
+      state.customTo = toISODate(toD);
+      try {
+        localStorage.setItem("customFrom", state.customFrom);
+        localStorage.setItem("customTo", state.customTo);
+      } catch (e) {}
+      $("#customFrom").value = state.customFrom;
+      $("#customTo").value = state.customTo;
+      $("#customRange").hidden = true;
+      selectRange("custom");
+    });
+  });
+
+  /* ---------------- Ctrl+K: focus global search ---------------- */
+  document.addEventListener("keydown", function (e) {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+      e.preventDefault();
+      var rs = $("#requestSearch");
+      if (rs) { rs.focus(); rs.select(); }
+    }
+  });
+
+  /* ---------------- Sidebar group collapse ---------------- */
+  $all(".nav-group__toggle").forEach(function (t) {
+    t.addEventListener("click", function () {
+      var g = t.closest(".nav-group");
+      var collapsed = g.classList.toggle("is-collapsed");
+      t.setAttribute("aria-expanded", String(!collapsed));
+      try {
+        var saved = JSON.parse(localStorage.getItem("navGroups") || "{}");
+        saved[g.getAttribute("data-group")] = collapsed;
+        localStorage.setItem("navGroups", JSON.stringify(saved));
+      } catch (e) {}
+    });
+  });
+  try {
+    var savedGroups = JSON.parse(localStorage.getItem("navGroups") || "{}");
+    $all(".nav-group").forEach(function (g) {
+      if (savedGroups[g.getAttribute("data-group")]) {
+        g.classList.add("is-collapsed");
+        var t = g.querySelector(".nav-group__toggle");
+        if (t) t.setAttribute("aria-expanded", "false");
+      }
+    });
+  } catch (e) {}
+
+  /* ---------------- Live stream controls ---------------- */
+  var WINDOWS = { "1m": 60, "5m": 300, "15m": 900, "1h": 3600 };
+  function updateStreamMeta() {
+    var meta = $("#streamMeta");
+    if (!meta) return;
+    var wl = Object.keys(WINDOWS).filter(function (k) { return WINDOWS[k] === state.liveWindow; })[0] || "1m";
+    meta.textContent = state.livePaused ? "paused · window " + wl : "streaming · window " + wl;
+  }
+  $all("[data-window]", $("#streamWindows")).forEach(function (b) {
+    b.addEventListener("click", function () {
+      $all("[data-window]", $("#streamWindows")).forEach(function (x) {
+        var on = x === b;
+        x.classList.toggle("is-active", on);
+        x.setAttribute("aria-pressed", String(on));
+      });
+      setStreamWindow(WINDOWS[b.getAttribute("data-window")] || 60);
+      updateStreamMeta();
+    });
+  });
+  var pauseBtn = $("#streamPause");
+  pauseBtn.addEventListener("click", function () {
+    state.livePaused = !state.livePaused;
+    pauseBtn.setAttribute("aria-pressed", String(state.livePaused));
+    pauseBtn.setAttribute("aria-label", state.livePaused ? "Resume stream" : "Pause stream");
+    pauseBtn.title = state.livePaused ? "Resume streaming" : "Pause streaming";
+    pauseBtn.innerHTML = '<i data-lucide="' + (state.livePaused ? "play" : "pause") + '"></i>';
+    icons();
+    updateStreamMeta();
+  });
+  updateStreamMeta();
+
+  /* ---------------- Filter changes sync chips ---------------- */
   $("#projectSelect").addEventListener("change", function () {
     state.project = this.value;
     try { localStorage.setItem("project", state.project); } catch (e) {}
     loadLiveRange(state.range).catch(function () {});
     renderGraph(false);
   });
-
-  $("#refreshBtn").addEventListener("click", doRefresh);
-  $("#exportBtn").addEventListener("click", exportCSV);
 
   $("#modelSearch").addEventListener("input", function () {
     state.modelSearch = this.value;
@@ -134,6 +256,7 @@ export function initControls() {
     state.requestSearch = this.value;
     state.page = 1;
     renderRequests();
+    updateChips();
   });
 
   $("#modelFilter").addEventListener("change", function () {
@@ -146,6 +269,27 @@ export function initControls() {
     state.agentFilter = this.value;
     state.page = 1;
     renderRequests();
+    updateChips();
+  });
+
+  /* ---------------- Row interactions ---------------- */
+  $("#modelBody").addEventListener("click", function (e) {
+    var tr = e.target.closest("tr[data-model-id]");
+    if (!tr) return;
+    var id = tr.getAttribute("data-model-id");
+    state.modelFilter = state.modelFilter === id ? "all" : id;
+    $("#modelFilter").value = state.modelFilter;
+    state.page = 1;
+    loadLiveRange(state.range).catch(function () {});
+  });
+
+  $("#sessionBody").addEventListener("click", function (e) {
+    var tr = e.target.closest("tr[data-session-id]");
+    if (!tr) return;
+    var id = tr.getAttribute("data-session-id");
+    var list = (state.liveRealtime && state.liveRealtime.sessions) || [];
+    var sess = list.filter(function (s) { return s.id === id; })[0];
+    if (sess) openSessionDrawer(sess);
   });
 
   $("#prevPage").addEventListener("click", function () {

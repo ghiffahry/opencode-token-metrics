@@ -1,7 +1,7 @@
 /* Chart.js renders: bar charts, usage line, stages, realtime stream init. */
 
 import { state, chartRegistry } from "../core/state.js";
-import { $, icons, cssVar, formatTokens } from "../core/utils.js";
+import { $, nf, icons, cssVar, formatTokens } from "../core/utils.js";
 
 export function chartDefaults() {
   return {
@@ -237,6 +237,11 @@ export function initRealtimeChart() {
   opt.animation = false;
   opt.plugins.legend.display = true;
   opt.plugins.tooltip.enabled = true;
+  opt.plugins.tooltip.callbacks = {
+    label: function (c) {
+      return " " + c.dataset.label + ": " + nf.format(c.parsed.y) + " tokens";
+    }
+  };
   opt.scales.x.ticks.maxRotation = 0;
   opt.scales.x.ticks.autoSkip = true;
   opt.scales.x.ticks.maxTicksLimit = 8;
@@ -261,4 +266,21 @@ export function initRealtimeChart() {
     },
     options: opt
   });
+}
+
+function trimToWindow() {
+  var c = chartRegistry.realtime;
+  if (!c) return;
+  var max = state.liveWindow;
+  if (c.data.labels.length > max) {
+    c.data.labels = c.data.labels.slice(-max);
+    c.data.datasets[0].data = c.data.datasets[0].data.slice(-max);
+    c.data.datasets[1].data = c.data.datasets[1].data.slice(-max);
+  }
+  c.update("none");
+}
+
+export function setStreamWindow(seconds) {
+  state.liveWindow = seconds;
+  trimToWindow();
 }

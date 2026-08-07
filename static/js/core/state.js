@@ -27,7 +27,10 @@ export var state = {
   customTo: "",
   contextUsage: null,
   budget: null,
-  contextView: "model"
+  contextView: "model",
+  livePaused: false,
+  liveWindow: 60,
+  lastSyncAt: 0
 };
 
 export var liveRangeCache = new Map();

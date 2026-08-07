@@ -381,6 +381,7 @@ def requests_list(limit=50, project=None, model=None):
         model = message_model(r["model"], d.get("modelID"))
         out.append({
             "id": r["id"],
+            "sessionId": r["session_id"],
             "modelId": model,
             "model": model,
             "agent": r["agent"] or (d.get("agent") or "unknown"),

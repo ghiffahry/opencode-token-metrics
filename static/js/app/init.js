@@ -6,6 +6,7 @@ import { initRealtimeChart } from "../render/charts.js";
 import { initGraphControls } from "../render/graph.js";
 import { startLive } from "../live/manager.js";
 import { loadProjects } from "../live/api.js";
+import { initTooltips } from "../ui/tooltip.js";
 
 export function init() {
   if (window.Chart) {
@@ -22,6 +23,7 @@ export function init() {
   initControls();
   initNavSpy();
   initGraphControls();
+  initTooltips();
 
   if (!window.Chart) {
     $all("canvas").forEach(function (c) { c.style.display = "none"; });

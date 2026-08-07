@@ -1,25 +1,56 @@
 /* Daily budget widget: today's token spend vs a daily target, projection,
-   and a 14-day calendar history (Asia/Jakarta day boundaries). */
+   burn rate and a 14-day calendar history (Asia/Jakarta day boundaries).
+   Percentages are shown raw — never clamped to 100%. */
 
 import { state, chartRegistry } from "../core/state.js";
-import { $, nf, esc, clamp, cssVar, hexToRgba, formatTokens, icons } from "../core/utils.js";
+import { $, nf, esc, clamp, cssVar, hexToRgba, formatTokens, formatTime, icons } from "../core/utils.js";
 
 var budgetChart = null;
+
+function burnRate(snap, nowMs) {
+  var used = snap.today.tokens || 0;
+  if (used <= 0 || !nowMs) return 0;
+  var d = new Date(nowMs);
+  var startOfDay = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  var hours = Math.max((nowMs - startOfDay) / 3600000, 0.1);
+  return used / hours;
+}
+
+function exceededAt(snap, nowMs) {
+  var target = snap.config.target || 0;
+  var used = snap.today.tokens || 0;
+  var rate = burnRate(snap, nowMs);
+  if (target <= 0 || rate <= 0) return null;
+  if (used > target) return { at: 0, label: "Exceeded — target passed earlier today" };
+  var remaining = target - used;
+  var minutes = Math.floor((remaining / rate) * 60);
+  if (minutes >= 24 * 60) return { at: minutes, label: "No target breach within 24h" };
+  var d = new Date(nowMs + minutes * 60000);
+  return { at: minutes, label: "Target exceeded at " + formatTime(d) };
+}
 
 export function renderBudget(snap) {
   if (!snap || !snap.config) return;
   var target = snap.config.target || 0;
-  var pct = clamp(snap.pct || 0, 0, 100);
-  var over = snap.today.tokens > target;
+  var used = snap.today.tokens || 0;
+  var pctRaw = target > 0 ? (used / target) * 100 : 0;
+  var over = used > target;
 
   $("#budgetTarget").textContent = formatTokens(target);
   $("#budgetTarget").title = snap.config.source === "configured"
     ? "Configured via TOKENMETRICS_DAILY_BUDGET"
     : snap.config.note || "Default estimate - set TOKENMETRICS_DAILY_BUDGET to pin a value";
+  var targetMeta = $("#budgetTargetMeta");
+  if (targetMeta) {
+    targetMeta.textContent = snap.config.source === "configured"
+      ? "Configured daily target"
+      : "Estimated target (set TOKENMETRICS_DAILY_BUDGET to pin)";
+  }
 
-  $("#budgetUsed").textContent = formatTokens(snap.today.tokens);
+  $("#budgetUsed").textContent = formatTokens(used);
+  $("#budgetUsed").title = nf.format(used) + " tokens today";
   $("#budgetLimit").textContent = formatTokens(target);
-  $("#budgetRemaining").textContent = formatTokens(snap.remaining);
+  $("#budgetRemaining").textContent = formatTokens(Math.max(0, snap.remaining || 0));
   var sub = $("#budgetSub");
   if (sub) {
     sub.textContent = "Usage today vs. configured target · " + snap.today.requests + " requests · " +
@@ -29,19 +60,33 @@ export function renderBudget(snap) {
   }
   var fill = $("#budgetBar");
   if (fill) {
-    fill.style.width = (over ? 100 : pct).toFixed(1) + "%";
+    fill.style.width = clamp(pctRaw, 0, 100).toFixed(1) + "%";
     fill.classList.toggle("is-over", over);
-    fill.classList.toggle("is-warn", !over && pct >= 75);
+    fill.classList.toggle("is-warn", !over && pctRaw >= 75);
     var bar = fill.parentElement;
-    if (bar) bar.setAttribute("aria-valuenow", String(Math.round(pct)));
+    if (bar) bar.setAttribute("aria-valuenow", String(Math.round(pctRaw)));
   }
-  $("#budgetPct").textContent = (over ? ">" : "") + pct.toFixed(1) + "%";
+  $("#budgetPct").textContent = pctRaw.toFixed(1) + "%";
   $("#budgetPct").classList.toggle("is-danger-text", over);
   var badge = $("#budgetBadge");
   if (badge) {
-    badge.textContent = over ? "Over budget" : "OK";
+    badge.textContent = over ? "Exceeded" : "OK";
     badge.classList.toggle("status-badge--danger", over);
     badge.classList.toggle("status-badge--ok", !over);
+  }
+  var overEl = $("#budgetOver");
+  if (overEl) {
+    overEl.hidden = !over;
+    if (over) overEl.textContent = nf.format(used - target) + " over configured target";
+  }
+
+  var nowMs = Date.now();
+  var burn = $("#budgetBurn");
+  if (burn) {
+    burn.hidden = false;
+    burn.innerHTML =
+      '<span class="budget-burn__item">Burn rate <strong>' + formatTokens(Math.round(burnRate(snap, nowMs))) + "/h</strong></span>" +
+      '<span class="budget-burn__item">Est. excess <strong>' + formatTokens(Math.max(0, (snap.projectedToday || 0) - target)) + "</strong></span>";
   }
 
   var proj = $("#budgetProjection");
@@ -52,6 +97,21 @@ export function renderBudget(snap) {
     proj.title = projPct > 100
       ? "Projected " + projPct.toFixed(0) + "% of daily budget"
       : "Extrapolated end-of-day usage (" + projPct.toFixed(0) + "% of budget)";
+  }
+  var projMeta = $("#budgetProjectionMeta");
+  if (projMeta) {
+    projMeta.textContent = projPct > 100
+      ? "Projected " + projPct.toFixed(0) + "% of daily target"
+      : "End-of-day projection at current burn rate";
+  }
+  var timing = $("#budgetTiming");
+  if (timing) {
+    var ex = exceededAt(snap, nowMs);
+    if (ex) {
+      timing.innerHTML = '<span class="budget-timing__item ' + (used > target ? "is-danger-text" : "") + '">' + ex.label + "</span>";
+    } else {
+      timing.innerHTML = "";
+    }
   }
 
   renderBudgetChart(snap);

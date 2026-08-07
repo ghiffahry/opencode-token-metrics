@@ -47,7 +47,8 @@ export function liveTick() {
         renderRateLimits(state.view);
       }
       renderTodayUsage(d.today);
-
+      state.lastSyncAt = Date.now();
+      $("#lastUpdateValue").textContent = formatTime(new Date());
       $("#footerStamp").textContent = "Updated " + formatTime(new Date());
       setLiveStatus(true);
 
@@ -74,7 +75,7 @@ function renderTodayUsage(today) {
   if (!req || !tok || !bar) return;
   req.textContent = nf.format(today.requests);
   tok.textContent = formatTokens(today.tokens) + " tokens";
-  var rl = state.view.rateLimits;
+  var rl = state.view && state.view.rateLimits;
   var pct = rl && rl.rpd && rl.rpd.limit
     ? clamp((today.requests / rl.rpd.limit) * 100, 0, 100)
     : 0;
@@ -87,7 +88,8 @@ function renderTodayUsage(today) {
 }
 
 function pushStream(tin, tout) {
-  var max = 60;
+  if (state.livePaused) return;
+  var max = state.liveWindow || 60;
   state.live.streamLabels.push(formatTime(new Date()));
   state.live.streamIn.push(tin);
   state.live.streamOut.push(tout);
@@ -101,6 +103,14 @@ function pushStream(tin, tout) {
     chartRegistry.realtime.data.datasets[0].data = state.live.streamIn.slice();
     chartRegistry.realtime.data.datasets[1].data = state.live.streamOut.slice();
     chartRegistry.realtime.update("none");
+  }
+  var sc = $("#streamCurrent");
+  if (sc) {
+    var total = state.live.input + state.live.output;
+    sc.innerHTML =
+      '<span class="sc-in" title="' + nf.format(state.live.input) + " tokens\">In <strong>" + formatTokens(state.live.input) + "</strong></span>" +
+      '<span class="sc-out" title="' + nf.format(state.live.output) + " tokens\">Out <strong>" + formatTokens(state.live.output) + "</strong></span>" +
+      '<span class="sc-total" title="' + nf.format(total) + " tokens\">Total <strong>" + formatTokens(total) + "</strong></span>";
   }
 }
 
@@ -154,12 +164,24 @@ function renderQuotaInsight(view) {
   if (!quota || !daily) return;
   if (Number.isFinite(daily.limit)) {
     quota.textContent = formatTokens(daily.limit) + " tokens";
-    if (daily.source === "configured") meta.textContent = "Configured limit (TOKENMETRICS_DTP)";
+    if (daily.source === "configured") meta.textContent = "Configured target (TOKENMETRICS_DTP)";
     else if (daily.source === "default") meta.textContent = "Default estimate - set TOKENMETRICS_DTP to override";
     else meta.textContent = "Server-provided limit";
   } else {
     quota.textContent = "Unknown";
     meta.textContent = "Provider quota not exposed - set TOKENMETRICS_DTP to define";
+  }
+}
+
+function fillContextStrip() {
+  var ctxVal = $("#contextValue");
+  var ctxMeta = $("#contextMeta");
+  if (!ctxVal) return;
+  var limits = Object.keys(state.liveContext).map(function (k) { return state.liveContext[k]; });
+  var max = limits.length ? Math.max.apply(null, limits) : (state.liveDefaultContext || 0);
+  if (max > 0) {
+    ctxVal.textContent = "up to " + formatTokens(max);
+    ctxMeta.textContent = "Provider context window, per model";
   }
 }
 
@@ -198,6 +220,8 @@ function bootLive() {
       renderSessionTable();
       renderLiveCounters();
       renderQuotaInsight(state.view);
+      fillContextStrip();
+      state.lastSyncAt = Date.now();
       $("#lastUpdateValue").textContent = formatTime(new Date());
       ensureGraphLoaded();
       setLiveStatus(true);

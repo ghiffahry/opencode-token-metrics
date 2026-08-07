@@ -79,3 +79,24 @@ export function esc(s) {
     return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
   });
 }
+
+export function downloadBlob(content, filename, mime) {
+  var blob = content instanceof Blob ? content : new Blob([content], { type: mime || "text/plain;charset=utf-8" });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 300);
+}
+
+export function formatDateTime(ms) {
+  var d = new Date(ms);
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) +
+    " · " + d.toLocaleTimeString("en-US", { hour12: false });
+}
+
+export function exact(n) {
+  return nf.format(Math.round(n));
+}

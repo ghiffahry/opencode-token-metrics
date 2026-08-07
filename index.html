@@ -48,44 +48,75 @@
         </button>
       </div>
 
-      <nav class="sidebar__nav">
-        <a class="nav-item is-active" href="#overview" data-section="overview">
-          <i data-lucide="layout-dashboard"></i><span class="nav-label">Overview</span>
-        </a>
-        <a class="nav-item" href="#realtime" data-section="realtime">
-          <i data-lucide="activity"></i><span class="nav-label">Realtime</span>
-          <span class="nav-badge live-dot" title="Live"></span>
-        </a>
-        <a class="nav-item" href="#efficiency" data-section="efficiency">
-          <i data-lucide="zap"></i><span class="nav-label">Token Efficiency</span>
-        </a>
-        <a class="nav-item" href="#content" data-section="content">
-          <i data-lucide="blocks"></i><span class="nav-label">Generate Content</span>
-        </a>
-        <a class="nav-item" href="#usage" data-section="usage">
-          <i data-lucide="chart-line"></i><span class="nav-label">Usage Over Time</span>
-        </a>
-        <a class="nav-item" href="#context" data-section="context">
-          <i data-lucide="scan"></i><span class="nav-label">Context Usage</span>
-        </a>
-        <a class="nav-item" href="#agents" data-section="agents">
-          <i data-lucide="layers"></i><span class="nav-label">By Agent / Stage</span>
-        </a>
-        <a class="nav-item" href="#models" data-section="models">
-          <i data-lucide="database"></i><span class="nav-label">By Model</span>
-        </a>
-        <a class="nav-item" href="#graph" data-section="graph">
-          <i data-lucide="git-fork"></i><span class="nav-label">Knowledge Graph</span>
-        </a>
-        <a class="nav-item" href="#requests" data-section="requests">
-          <i data-lucide="clock"></i><span class="nav-label">Recent Requests</span>
-        </a>
-        <a class="nav-item" href="#limits" data-section="limits">
-          <i data-lucide="gauge"></i><span class="nav-label">Rate Limits</span>
-        </a>
-        <a class="nav-item" href="#budget" data-section="budget">
-          <i data-lucide="coins"></i><span class="nav-label">Daily Budget</span>
-        </a>
+      <nav class="sidebar__nav" aria-label="Sections">
+        <div class="nav-group" data-group="monitor">
+          <button class="nav-group__toggle" type="button" aria-expanded="true" aria-controls="navg-monitor">
+            <span>Monitor</span><i data-lucide="chevron-down"></i>
+          </button>
+          <div class="nav-group__items" id="navg-monitor">
+            <a class="nav-item is-active" href="#overview" data-section="overview">
+              <i data-lucide="layout-dashboard"></i><span class="nav-label">Overview</span>
+            </a>
+            <a class="nav-item" href="#realtime" data-section="realtime">
+              <i data-lucide="activity"></i><span class="nav-label">Realtime</span>
+              <span class="nav-badge live-dot" title="Live"></span>
+            </a>
+          </div>
+        </div>
+
+        <div class="nav-group" data-group="analytics">
+          <button class="nav-group__toggle" type="button" aria-expanded="true" aria-controls="navg-analytics">
+            <span>Analytics</span><i data-lucide="chevron-down"></i>
+          </button>
+          <div class="nav-group__items" id="navg-analytics">
+            <a class="nav-item" href="#efficiency" data-section="efficiency">
+              <i data-lucide="zap"></i><span class="nav-label">Token Efficiency</span>
+            </a>
+            <a class="nav-item" href="#content" data-section="content">
+              <i data-lucide="blocks"></i><span class="nav-label">Generate Content</span>
+            </a>
+            <a class="nav-item" href="#usage" data-section="usage">
+              <i data-lucide="chart-line"></i><span class="nav-label">Usage Over Time</span>
+            </a>
+            <a class="nav-item" href="#context" data-section="context">
+              <i data-lucide="scan"></i><span class="nav-label">Context Usage</span>
+            </a>
+            <a class="nav-item" href="#agents" data-section="agents">
+              <i data-lucide="layers"></i><span class="nav-label">By Agent / Stage</span>
+            </a>
+            <a class="nav-item" href="#models" data-section="models">
+              <i data-lucide="database"></i><span class="nav-label">By Model</span>
+            </a>
+          </div>
+        </div>
+
+        <div class="nav-group" data-group="observability">
+          <button class="nav-group__toggle" type="button" aria-expanded="true" aria-controls="navg-observability">
+            <span>Observability</span><i data-lucide="chevron-down"></i>
+          </button>
+          <div class="nav-group__items" id="navg-observability">
+            <a class="nav-item" href="#graph" data-section="graph">
+              <i data-lucide="git-fork"></i><span class="nav-label">Knowledge Graph</span>
+            </a>
+            <a class="nav-item" href="#requests" data-section="requests">
+              <i data-lucide="clock"></i><span class="nav-label">Recent Requests</span>
+            </a>
+          </div>
+        </div>
+
+        <div class="nav-group" data-group="control">
+          <button class="nav-group__toggle" type="button" aria-expanded="true" aria-controls="navg-control">
+            <span>Control</span><i data-lucide="chevron-down"></i>
+          </button>
+          <div class="nav-group__items" id="navg-control">
+            <a class="nav-item" href="#limits" data-section="limits">
+              <i data-lucide="gauge"></i><span class="nav-label">Rate Limits</span>
+            </a>
+            <a class="nav-item" href="#budget" data-section="budget">
+              <i data-lucide="coins"></i><span class="nav-label">Daily Budget</span>
+            </a>
+          </div>
+        </div>
       </nav>
 
       <div class="sidebar__footer">
@@ -106,8 +137,10 @@
       <div class="banner banner--warn" id="dbBanner" role="alert" hidden>
         <i data-lucide="database"></i>
         <span id="dbBannerText">Checking OpenCode database status…</span>
+        <button class="btn btn--ghost btn--sm" id="bannerRetry" type="button">Retry</button>
       </div>
-      <!-- Topbar -->
+
+      <!-- Row 1: page header -->
       <header class="topbar">
         <div class="topbar__left">
           <button class="icon-btn menu-toggle" id="menuToggle" type="button" aria-label="Open navigation" title="Open navigation">
@@ -131,18 +164,36 @@
           <button class="btn btn--ghost" id="refreshBtn" type="button" title="Refresh live data">
             <i data-lucide="refresh-cw"></i><span>Refresh</span>
           </button>
-          <button class="btn btn--primary" id="exportBtn" type="button" title="Export CSV">
-            <i data-lucide="download"></i><span>Export</span>
-          </button>
+          <div class="export-wrap">
+            <button class="btn btn--primary" id="exportBtn" type="button" title="Export data" aria-haspopup="menu" aria-expanded="false">
+              <i data-lucide="download"></i><span>Export</span><i data-lucide="chevron-down" class="export-wrap__chevron"></i>
+            </button>
+            <div class="export-menu" id="exportMenu" role="menu" hidden>
+              <button class="export-menu__item" type="button" data-export="csv" role="menuitem">
+                <i data-lucide="table"></i><span><strong>CSV</strong><small>Current view as spreadsheet</small></span>
+              </button>
+              <button class="export-menu__item" type="button" data-export="json" role="menuitem">
+                <i data-lucide="braces"></i><span><strong>JSON</strong><small>Raw payload for the current range</small></span>
+              </button>
+              <button class="export-menu__item" type="button" data-export="png" role="menuitem">
+                <i data-lucide="image"></i><span><strong>PNG snapshot</strong><small>All chart canvases in one image</small></span>
+              </button>
+              <div class="export-menu__foot">
+                <span>Period: <strong id="exportPeriod">—</strong></span>
+                <span>Filters: <strong id="exportFilters">all models · all agents</strong></span>
+              </div>
+            </div>
+          </div>
         </div>
       </header>
 
-      <!-- Toolbar -->
+      <!-- Row 2: global filters (sticky) -->
       <div class="toolbar">
         <div class="toolbar__filters">
           <div class="search-field" id="requestSearchWrap">
             <i data-lucide="search"></i>
-            <input type="search" id="requestSearch" placeholder="Search requests…" aria-label="Search requests" />
+            <input type="search" id="requestSearch" placeholder="Search requests, sessions, models…" aria-label="Global search" title="Matches request ID, session ID, model and agent. Shortcut: Ctrl+K" />
+            <kbd class="kbd">Ctrl K</kbd>
           </div>
           <select id="modelFilter" class="select" aria-label="Filter by model">
             <option value="all">All models</option>
@@ -159,15 +210,30 @@
           <button class="range-btn" type="button" data-range="24h" aria-pressed="false" title="Rolling window: now - 24 hours (operational, not Today)">Last 24h</button>
           <button class="range-btn" type="button" data-range="custom" aria-pressed="false" title="Pick a custom calendar range">Custom</button>
         </div>
+
         <div class="custom-range" id="customRange" hidden>
-          <label class="custom-range__label" for="customFrom">From</label>
-          <input type="date" id="customFrom" class="custom-range__input" aria-label="Custom range start" />
-          <label class="custom-range__label" for="customTo">To</label>
-          <input type="date" id="customTo" class="custom-range__input" aria-label="Custom range end" />
-          <button class="btn btn--primary" id="customApply" type="button">Apply</button>
-          <button class="btn btn--ghost" id="customCancel" type="button">Cancel</button>
+          <div class="custom-range__presets" id="customPresets" role="group" aria-label="Quick presets">
+            <button class="range-btn" type="button" data-preset="today">Today</button>
+            <button class="range-btn" type="button" data-preset="yesterday">Yesterday</button>
+            <button class="range-btn" type="button" data-preset="7d">Last 7 days</button>
+            <button class="range-btn" type="button" data-preset="30d">Last 30 days</button>
+            <button class="range-btn" type="button" data-preset="month">This month</button>
+            <button class="range-btn" type="button" data-preset="prevmonth">Previous month</button>
+          </div>
+          <div class="custom-range__row">
+            <label class="custom-range__label" for="customFrom">From</label>
+            <input type="date" id="customFrom" class="custom-range__input" aria-label="Custom range start" />
+            <label class="custom-range__label" for="customTo">To</label>
+            <input type="date" id="customTo" class="custom-range__input" aria-label="Custom range end" />
+            <span class="custom-range__tz">Timezone: Asia/Jakarta</span>
+            <button class="btn btn--primary" id="customApply" type="button">Apply</button>
+            <button class="btn btn--ghost" id="customCancel" type="button">Cancel</button>
+          </div>
         </div>
       </div>
+
+      <!-- Active filter chips -->
+      <div class="filter-chips" id="filterChips" role="group" aria-label="Active filters" hidden></div>
 
       <div class="content">
         <!-- Overview -->
@@ -176,24 +242,46 @@
             <h2>Overview</h2>
             <span class="section__sub" id="overviewSub">Last 7 days</span>
           </header>
-          <div class="kpi-grid" id="kpiGrid" aria-live="polite"></div>
-          <div class="app-insight-grid" aria-label="Usage and quota status">
-            <article class="app-insight-card">
-              <div class="app-insight-card__icon"><i data-lucide="database"></i></div>
-              <div><span class="app-insight-card__label">Data source</span><strong id="dataSourceValue">Checking…</strong><small id="dataSourceMeta">Waiting for local database status</small></div>
-            </article>
-            <article class="app-insight-card">
-              <div class="app-insight-card__icon"><i data-lucide="calendar-clock"></i></div>
-              <div><span class="app-insight-card__label">Daily quota</span><strong id="dailyQuotaValue">Unknown</strong><small id="dailyQuotaMeta">Provider limit is not published</small></div>
-            </article>
-            <article class="app-insight-card">
-              <div class="app-insight-card__icon"><i data-lucide="scan"></i></div>
-              <div><span class="app-insight-card__label">Session context</span><strong id="contextValue">Model dependent</strong><small id="contextMeta">Context window shown per model</small></div>
-            </article>
-            <article class="app-insight-card">
-              <div class="app-insight-card__icon"><i data-lucide="refresh-cw"></i></div>
-              <div><span class="app-insight-card__label">Last update</span><strong id="lastUpdateValue">—</strong><small id="lastUpdateMeta">Live polling every few seconds</small></div>
-            </article>
+          <div class="kpi-grid" id="kpiGrid" aria-live="polite">
+            <article class="card metric-card skeleton" aria-hidden="true"><span class="skeleton__line" style="width:55%"></span><span class="skeleton__line skeleton__line--big" style="width:70%"></span><span class="skeleton__line" style="width:40%"></span></article>
+            <article class="card metric-card skeleton" aria-hidden="true"><span class="skeleton__line" style="width:55%"></span><span class="skeleton__line skeleton__line--big" style="width:45%"></span><span class="skeleton__line" style="width:40%"></span></article>
+            <article class="card metric-card skeleton" aria-hidden="true"><span class="skeleton__line" style="width:55%"></span><span class="skeleton__line skeleton__line--big" style="width:60%"></span><span class="skeleton__line" style="width:40%"></span></article>
+            <article class="card metric-card skeleton" aria-hidden="true"><span class="skeleton__line" style="width:55%"></span><span class="skeleton__line skeleton__line--big" style="width:50%"></span><span class="skeleton__line" style="width:40%"></span></article>
+          </div>
+
+          <div class="status-strip" id="statusStrip" aria-label="System status">
+            <div class="status-item">
+              <i data-lucide="database" class="status-item__icon"></i>
+              <div class="status-item__body">
+                <span class="status-item__label">Database</span>
+                <strong id="dataSourceValue">Checking…</strong>
+                <small id="dataSourceMeta">Waiting for local database status</small>
+              </div>
+            </div>
+            <div class="status-item">
+              <i data-lucide="calendar-clock" class="status-item__icon"></i>
+              <div class="status-item__body">
+                <span class="status-item__label">Daily budget</span>
+                <strong id="dailyQuotaValue">Unknown</strong>
+                <small id="dailyQuotaMeta">Provider limit is not published</small>
+              </div>
+            </div>
+            <div class="status-item">
+              <i data-lucide="scan" class="status-item__icon"></i>
+              <div class="status-item__body">
+                <span class="status-item__label">Context</span>
+                <strong id="contextValue">Model dependent</strong>
+                <small id="contextMeta">Context window shown per model</small>
+              </div>
+            </div>
+            <div class="status-item">
+              <i data-lucide="refresh-cw" class="status-item__icon"></i>
+              <div class="status-item__body">
+                <span class="status-item__label">Last sync</span>
+                <strong id="lastUpdateValue">—</strong>
+                <small id="lastUpdateMeta">Live polling every few seconds</small>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -210,8 +298,20 @@
             <div class="card chart-card">
               <div class="card__head">
                 <h3>Live Token Stream</h3>
-                <span class="card__meta" id="streamMeta">streaming</span>
+                <div class="card__head-controls">
+                  <div class="segmented segmented--sm" id="streamWindows" role="group" aria-label="Stream window">
+                    <button class="segment-btn is-active" type="button" data-window="1m" aria-pressed="true">1m</button>
+                    <button class="segment-btn" type="button" data-window="5m" aria-pressed="false">5m</button>
+                    <button class="segment-btn" type="button" data-window="15m" aria-pressed="false">15m</button>
+                    <button class="segment-btn" type="button" data-window="1h" aria-pressed="false">1h</button>
+                  </div>
+                  <button class="icon-btn icon-btn--sm" id="streamPause" type="button" aria-label="Pause stream" title="Pause streaming" aria-pressed="false">
+                    <i data-lucide="pause"></i>
+                  </button>
+                  <span class="card__meta" id="streamMeta">streaming</span>
+                </div>
               </div>
+              <div class="stream-current" id="streamCurrent" aria-live="polite"></div>
               <div class="chart-wrap"><canvas id="realtimeChart" height="220" aria-label="Live token stream chart" role="img"></canvas></div>
             </div>
 
@@ -221,7 +321,7 @@
                 <span class="card__meta" id="sessionMeta">3 active</span>
               </div>
               <div class="table-scroll">
-                <table class="data-table" id="sessionTable" aria-describedby="Session-level token usage, updates in realtime">
+                <table class="data-table" id="sessionTable" aria-describedby="Session-level token usage, updates in realtime. Click a row to inspect the session.">
                   <thead>
                     <tr>
                       <th>Session</th>
@@ -275,15 +375,15 @@
           </header>
           <div class="grid grid--3">
             <div class="card chart-card">
-              <div class="card__head"><h3>Consumption</h3><i class="info-icon" data-lucide="info" title="Total input &amp; output tokens consumed across all models." tabindex="0"></i></div>
+              <div class="card__head"><h3>Consumption</h3><i class="info-icon" data-lucide="info" data-tip="Total input &amp; output tokens consumed across all models. Input = uncached prompt tokens, Output = completion tokens." tabindex="0"></i></div>
               <div class="consumption" id="effConsumption"></div>
             </div>
             <div class="card chart-card">
-              <div class="card__head"><h3>Efficiency</h3><i class="info-icon" data-lucide="info" title="Average tokens per request and the input/output ratio, compared to a 0.51 baseline." tabindex="0"></i></div>
+              <div class="card__head"><h3>Efficiency</h3><i class="info-icon" data-lucide="info" data-tip="Output/Input ratio: for every 1,000 input tokens, ratio x 1,000 output tokens were generated. A low ratio is not automatically bad — it depends on the task." tabindex="0"></i></div>
               <div class="efficiency-list" id="effEfficiency"></div>
             </div>
             <div class="card chart-card">
-              <div class="card__head"><h3>Health</h3><i class="info-icon" data-lucide="info" title="Live capacity against quota limits." tabindex="0"></i></div>
+              <div class="card__head"><h3>Limits &amp; Health</h3><i class="info-icon" data-lucide="info" data-tip="Live capacity against configured limits. RPM = requests per minute, TPM = tokens per minute, RPD = requests per day. Bars cap at 100%; the ratio is shown as used / limit." tabindex="0"></i></div>
               <div class="health-list" id="effHealth"></div>
             </div>
           </div>
@@ -297,11 +397,11 @@
           </header>
           <div class="grid grid--2">
             <div class="card chart-card">
-              <div class="card__head"><h3>Input Tokens</h3><i class="info-icon" data-lucide="info" title="Input (prompt) tokens consumed per model." tabindex="0"></i></div>
+              <div class="card__head"><h3>Input Tokens</h3><i class="info-icon" data-lucide="info" data-tip="New (uncached) input tokens consumed per model during the selected period." tabindex="0"></i></div>
               <div class="chart-wrap"><canvas id="chartGeneration" height="240" aria-label="Input tokens by model chart" role="img"></canvas></div>
             </div>
             <div class="card chart-card">
-              <div class="card__head"><h3>Output Tokens</h3><i class="info-icon" data-lucide="info" title="Output (completion) tokens generated per model." tabindex="0"></i></div>
+              <div class="card__head"><h3>Output Tokens</h3><i class="info-icon" data-lucide="info" data-tip="Output (completion) tokens generated per model during the selected period." tabindex="0"></i></div>
               <div class="chart-wrap"><canvas id="chartApi" height="240" aria-label="Output tokens by model chart" role="img"></canvas></div>
             </div>
           </div>
@@ -329,30 +429,55 @@
             <span class="section__sub" id="contextSub">Context window utilisation</span>
           </header>
 
-          <div class="grid grid--2">
-            <div class="card chart-card">
+          <div class="grid ctx-grid">
+            <div class="card ctx-card">
               <div class="card__head">
-                <h3>Latest request context</h3>
-                <span class="card__meta" id="ctxLatestMeta">loading…</span>
+                <h3>Context Window</h3>
+                <span class="badge badge--provider">Provider data</span>
               </div>
-              <div class="ctx-widget" id="ctxLatest"></div>
-              <div class="empty-state" id="ctxLatestEmpty" hidden>
-                <i data-lucide="scan"></i>
-                <span class="empty-state__title">No requests in range</span>
+              <div class="ctx-card__body">
+                <div class="ctx-window" id="ctxLatest"></div>
+                <div class="empty-state" id="ctxLatestEmpty" hidden>
+                  <i data-lucide="scan"></i>
+                  <span class="empty-state__title">No requests in range</span>
+                </div>
               </div>
             </div>
 
-            <div class="card chart-card">
+            <div class="card ctx-card">
               <div class="card__head">
-                <h3>Composition (estimated)</h3>
-                <span class="card__meta" id="ctxCompMeta">heuristic</span>
+                <h3>Context Composition</h3>
+                <span class="badge badge--est">Estimated</span>
               </div>
-              <div class="ctx-composition" id="ctxComposition"></div>
-              <p class="ctx-note" id="ctxCompNote"></p>
+              <div class="ctx-card__body">
+                <p class="ctx-comp__sub">Estimated distribution of current input context</p>
+                <div class="ctx-composition" id="ctxComposition"></div>
+                <div class="ctx-comp__footer">
+                  <span class="ctx-comp__insight" id="ctxInsight" hidden></span>
+                  <span class="ctx-comp__info">
+                    <i data-lucide="info"></i>
+                    Estimated from available OpenCode context metadata.
+                    <button type="button" class="ctx-comp__learn" id="ctxLearnBtn" aria-haspopup="true" aria-expanded="false">Learn how</button>
+                  </span>
+                </div>
+                <div class="ctx-popover" id="ctxLearnPop" hidden>
+                  <div class="ctx-popover__title">How context composition is estimated</div>
+                  <p>OpenCode does not expose exact category-level token attribution.</p>
+                  <p>Provider-reported input tokens are used as the total reference.</p>
+                  <p>Static context is estimated from available project sources including:</p>
+                  <ul>
+                    <li>AGENTS.md</li>
+                    <li>rules</li>
+                    <li>SKILL.md</li>
+                    <li>opencode.json</li>
+                  </ul>
+                  <p>Remaining attribution uses available conversation, workspace, retrieval, and MCP metadata.</p>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div class="card table-card" style="margin-top:1rem">
+          <div class="card table-card" id="ctxBreakdownCard" style="margin-top:1rem">
             <div class="card__head">
               <h3>Context breakdown</h3>
               <div class="segmented" role="radiogroup" aria-label="Context breakdown view" id="ctxSegmented">
@@ -371,8 +496,11 @@
                     <th class="numeric">New In</th>
                     <th class="numeric">Cached</th>
                     <th class="numeric">Output</th>
+                    <th class="numeric">Cache %</th>
                     <th class="numeric">Peak</th>
                     <th class="numeric">Window</th>
+                    <th class="numeric">Avg Context</th>
+                    <th class="numeric">Last Used</th>
                   </tr>
                 </thead>
                 <tbody id="ctxBody"></tbody>
@@ -384,13 +512,38 @@
             </div>
           </div>
 
-          <div class="card chart-card" style="margin-top:1rem">
+          <div class="card ctx-card ctx-growth-card" id="ctxGrowthCard" style="margin-top:1rem">
             <div class="card__head">
-              <h3>Conversation growth</h3>
-              <span class="card__meta" id="ctxGrowthMeta">select a session to inspect</span>
+              <h3>Conversation Growth</h3>
+              <div class="ctx-growth__tools">
+                <span class="card__meta" id="ctxGrowthMeta" hidden></span>
+                <div class="ctx-session-pick">
+                  <button type="button" class="btn btn--sm" id="ctxGrowthSelect" aria-haspopup="listbox" aria-expanded="false">Select session</button>
+                  <div class="ctx-session-menu" id="ctxSessionMenu" role="listbox" hidden></div>
+                </div>
+              </div>
             </div>
-            <div class="chart-wrap"><canvas id="ctxGrowth" height="200" aria-label="Conversation growth per message" role="img"></canvas></div>
+            <div class="ctx-card__body">
+              <div class="ctx-growth__empty" id="ctxGrowthEmpty">
+                <i data-lucide="activity"></i>
+                <span>Select a session to inspect how its context grew over time.</span>
+              </div>
+              <div class="chart-wrap" id="ctxGrowthWrap" hidden>
+                <canvas id="ctxGrowth" height="240" aria-label="Conversation growth per message" role="img"></canvas>
+              </div>
+            </div>
           </div>
+
+          <div class="drawer-scrim" id="ctxDrawerScrim" hidden></div>
+          <aside class="drawer ctx-drawer" id="ctxDrawer" hidden aria-hidden="true">
+            <div class="drawer__head">
+              <h3 id="ctxDrawerTitle">Context</h3>
+              <button class="icon-btn" id="ctxDrawerClose" type="button" aria-label="Close context details">
+                <i data-lucide="x"></i>
+              </button>
+            </div>
+            <div class="drawer__body" id="ctxDrawerBody"></div>
+          </aside>
         </section>
 
         <!-- Usage by Agent/Stage -->
@@ -420,18 +573,18 @@
               </div>
             </div>
             <div class="table-scroll">
-              <table class="data-table" id="modelTable" aria-describedby="Token usage aggregated per model">
+              <table class="data-table" id="modelTable" aria-describedby="Token usage aggregated per model. Click a row to filter the whole dashboard by that model.">
                 <thead>
                   <tr>
                     <th class="sortable" data-sort="model" aria-sort="none">Model</th>
                     <th class="numeric sortable" data-sort="requests" aria-sort="none">Requests</th>
-                    <th class="numeric sortable" data-sort="input" aria-sort="none">Input <i class="info-icon" data-lucide="info" title="Prompt tokens consumed." tabindex="0"></i></th>
-                    <th class="numeric sortable" data-sort="output" aria-sort="none">Output <i class="info-icon" data-lucide="info" title="Completion tokens generated." tabindex="0"></i></th>
+                    <th class="numeric sortable" data-sort="input" aria-sort="none">Input <i class="info-icon" data-lucide="info" data-tip="Total uncached/new input tokens during the selected period." tabindex="0"></i></th>
+                    <th class="numeric sortable" data-sort="output" aria-sort="none">Output <i class="info-icon" data-lucide="info" data-tip="Completion tokens generated during the selected period." tabindex="0"></i></th>
                     <th class="numeric sortable" data-sort="total" aria-sort="none">Total</th>
-                    <th class="numeric sortable" data-sort="errors" aria-sort="none">Errors</th>
-                    <th class="numeric sortable" data-sort="success" aria-sort="none">Success <i class="info-icon" data-lucide="info" title="Requests completed successfully / total requests." tabindex="0"></i></th>
-                    <th class="numeric sortable" data-sort="latency" aria-sort="none">Avg Latency <i class="info-icon" data-lucide="info" title="Weighted average latency in milliseconds." tabindex="0"></i></th>
-                    <th class="numeric">Context <i class="info-icon" data-lucide="info" title="Largest context window used per request vs. the model context limit." tabindex="0"></i></th>
+                    <th class="numeric sortable" data-sort="errors" aria-sort="none">Errors <i class="info-icon" data-lucide="info" data-tip="Failed tool calls plus parts with error finish status (estimate)." tabindex="0"></i></th>
+                    <th class="numeric sortable" data-sort="success" aria-sort="none">Success <i class="info-icon" data-lucide="info" data-tip="Requests completed successfully / total requests." tabindex="0"></i></th>
+                    <th class="numeric sortable" data-sort="latency" aria-sort="none">Avg Latency <i class="info-icon" data-lucide="info" data-tip="Weighted average latency in milliseconds." tabindex="0"></i></th>
+                    <th class="numeric">Context <i class="info-icon" data-lucide="info" data-tip="Largest context window used per request vs. the model context limit." tabindex="0"></i></th>
                     <th>Status</th>
                   </tr>
                 </thead>
@@ -465,13 +618,43 @@
             </a>
           </div>
 
-          <div class="graph-view" id="graphNative">
-            <div class="graph-container" id="graphContainer" aria-label="Interactive code graph"></div>
-            <div class="empty-state" id="graphEmpty" hidden>
-              <i data-lucide="git-fork"></i>
-              <span class="empty-state__title" id="graphEmptyTitle">No graph data</span>
-              <span class="empty-state__sub" id="graphEmptySub"></span>
+          <div class="graph-controls" id="graphControls" hidden>
+            <div class="search-field search-field--small">
+              <i data-lucide="search"></i>
+              <input type="search" id="graphSearch" placeholder="Search nodes…" aria-label="Search graph nodes" />
             </div>
+            <select id="graphTypeFilter" class="select" aria-label="Filter by node type" title="Filter nodes by type">
+              <option value="all">All types</option>
+            </select>
+            <label class="check-label" title="Hide nodes with no links">
+              <input type="checkbox" id="graphHideIsolated" /><span>Hide isolated</span>
+            </label>
+            <span class="graph-controls__spacer"></span>
+            <div class="segmented" role="group" aria-label="Zoom controls">
+              <button class="icon-btn icon-btn--sm" id="graphZoomIn" type="button" aria-label="Zoom in" title="Zoom in"><i data-lucide="zoom-in"></i></button>
+              <button class="icon-btn icon-btn--sm" id="graphZoomOut" type="button" aria-label="Zoom out" title="Zoom out"><i data-lucide="zoom-out"></i></button>
+              <button class="icon-btn icon-btn--sm" id="graphFit" type="button" aria-label="Fit graph" title="Fit graph to view"><i data-lucide="maximize"></i></button>
+              <button class="icon-btn icon-btn--sm" id="graphReset" type="button" aria-label="Reset view" title="Reset view"><i data-lucide="rotate-ccw"></i></button>
+            </div>
+            <div class="graph-legend" id="graphLegend" aria-label="Graph legend"></div>
+          </div>
+
+          <div class="graph-layout" id="graphLayout">
+            <div class="graph-main" id="graphMain">
+              <div class="graph-container" id="graphContainer" aria-label="Interactive code graph"></div>
+              <div class="empty-state" id="graphEmpty" hidden>
+                <i data-lucide="git-fork"></i>
+                <span class="empty-state__title" id="graphEmptyTitle">No graph data</span>
+                <span class="empty-state__sub" id="graphEmptySub"></span>
+              </div>
+            </div>
+            <aside class="graph-inspector" id="graphInspector" aria-label="Node inspector" hidden>
+              <header class="graph-inspector__head">
+                <h3>Node inspector</h3>
+                <button class="icon-btn icon-btn--sm" id="graphInspectorClose" type="button" aria-label="Close inspector" title="Close"><i data-lucide="x"></i></button>
+              </header>
+              <div class="graph-inspector__body" id="graphInspectorBody"></div>
+            </aside>
           </div>
           <div class="graph-view" id="graphFrame" hidden>
             <iframe id="graphIframe" class="graph-frame" title="Graph view" src="about:blank"></iframe>
@@ -525,61 +708,65 @@
         <section id="limits" class="section">
           <header class="section__header">
             <h2>Rate Limits</h2>
-            <span class="section__sub" id="limitsSub">Live quota utilisation</span>
+            <span class="section__sub" id="limitsSub">Provider / model restrictions</span>
           </header>
           <div class="grid grid--3">
             <div class="card chart-card" id="rpmCard">
-              <div class="card__head"><h3>Requests per minute</h3><i class="info-icon" data-lucide="info" title="Requests per minute vs. the 60 RPM quota." tabindex="0"></i></div>
+              <div class="card__head"><h3>Requests per minute</h3><i class="info-icon" data-lucide="info" data-tip="RPM — requests completed during the rolling 60-second window vs. the configured quota." tabindex="0"></i></div>
               <div class="rate-limit" data-limit="rpm">
                 <div class="rate-limit__value"><span class="rate-limit__used" id="rpmUsed">0</span><span class="rate-limit__sep">/</span><span class="rate-limit__limit" id="rpmLimit">60</span></div>
-                <div class="rate-limit__label">req / min</div>
+                <div class="rate-limit__label">req / min · rolling 60s</div>
                 <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
                   <span class="progress__bar" id="rpmBar" style="width:0%"></span>
                 </div>
                 <div class="rate-limit__foot"><span class="status-badge" id="rpmBadge">OK</span><span class="rate-limit__pct" id="rpmPct">0%</span></div>
+                <div class="rate-limit__over" id="rpmOver" hidden></div>
               </div>
             </div>
             <div class="card chart-card" id="tpmCard">
-              <div class="card__head"><h3>Tokens per minute</h3><i class="info-icon" data-lucide="info" title="Input + output tokens per minute vs. the 250K TPM quota." tabindex="0"></i></div>
+              <div class="card__head"><h3>Tokens per minute</h3><i class="info-icon" data-lucide="info" data-tip="TPM — input + output tokens processed during the rolling 60-second window vs. the configured quota." tabindex="0"></i></div>
               <div class="rate-limit" data-limit="tpm">
                 <div class="rate-limit__value"><span class="rate-limit__used" id="tpmUsed">0</span><span class="rate-limit__sep">/</span><span class="rate-limit__limit" id="tpmLimit">250,000</span></div>
-                <div class="rate-limit__label">tokens / min</div>
+                <div class="rate-limit__label">tokens / min · rolling 60s</div>
                 <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
                   <span class="progress__bar" id="tpmBar" style="width:0%"></span>
                 </div>
                 <div class="rate-limit__foot"><span class="status-badge" id="tpmBadge">OK</span><span class="rate-limit__pct" id="tpmPct">0%</span></div>
+                <div class="rate-limit__over" id="tpmOver" hidden></div>
               </div>
             </div>
             <div class="card chart-card" id="rpdCard">
-              <div class="card__head"><h3>Requests per day</h3><i class="info-icon" data-lucide="info" title="Actual requests read from OpenCode. The daily quota is an estimate (default 200) - set TOKENMETRICS_RPD to pin a verified value." tabindex="0"></i></div>
+              <div class="card__head"><h3>Requests per day</h3><i class="info-icon" data-lucide="info" data-tip="Requests since 00:00 (local calendar day). The daily limit is an estimate (default 200) — set TOKENMETRICS_RPD to pin a verified value." tabindex="0"></i></div>
               <div class="rate-limit" data-limit="rpd">
                 <div class="rate-limit__value"><span class="rate-limit__used" id="rpdUsed">0</span><span class="rate-limit__sep">/</span><span class="rate-limit__limit" id="rpdLimit">200</span></div>
-                <div class="rate-limit__label">requests / day</div>
+                <div class="rate-limit__label" id="rpdLabel">requests / day · configured target</div>
                 <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
                   <span class="progress__bar" id="rpdBar" style="width:0%"></span>
                 </div>
                 <div class="rate-limit__foot"><span class="status-badge" id="rpdBadge">OK</span><span class="rate-limit__pct" id="rpdPct">0%</span></div>
+                <div class="rate-limit__over" id="rpdOver" hidden></div>
               </div>
             </div>
           </div>
 
           <div class="grid grid--2" style="margin-top:1rem">
             <div class="card chart-card" id="dtpCard">
-              <div class="card__head"><h3>Daily token usage</h3><i class="info-icon" data-lucide="info" title="Actual input + output tokens read from the local OpenCode database. The daily quota is an estimate (default 400K) - set TOKENMETRICS_DTP to pin a verified value." tabindex="0"></i></div>
+              <div class="card__head"><h3>Daily token usage</h3><i class="info-icon" data-lucide="info" data-tip="Input + output tokens since 00:00. The daily quota is a local estimate (default 400K) — set TOKENMETRICS_DTP to pin a verified value. Not a provider-enforced limit." tabindex="0"></i></div>
               <div class="rate-limit" data-limit="dtp">
                 <div class="rate-limit__value"><span class="rate-limit__used" id="dtpUsed">0</span><span class="rate-limit__sep">/</span><span class="rate-limit__limit" id="dtpLimit">?</span></div>
-                <div class="rate-limit__label">tokens / day · <span id="dtpRemaining">unknown</span> remaining</div>
+                <div class="rate-limit__label" id="dtpLabel">tokens / day · <span id="dtpRemaining">unknown</span> remaining</div>
                 <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
                   <span class="progress__bar" id="dtpBar" style="width:0%"></span>
                 </div>
                 <div class="rate-limit__foot"><span class="status-badge" id="dtpBadge">OK</span><span class="rate-limit__pct" id="dtpPct">0%</span></div>
+                <div class="rate-limit__over" id="dtpOver" hidden></div>
               </div>
             </div>
             <div class="card chart-card" id="rpdTodayCard">
-              <div class="card__head"><h3>Usage today</h3><i class="info-icon" data-lucide="info" title="Requests and tokens actually consumed since 00:00 local calendar day." tabindex="0"></i></div>
+              <div class="card__head"><h3>Usage today</h3><i class="info-icon" data-lucide="info" data-tip="Requests and tokens actually consumed since 00:00 local calendar day (Asia/Jakarta)." tabindex="0"></i></div>
               <div class="rate-limit">
                 <div class="rate-limit__value"><span class="rate-limit__used" id="todayRequests">0</span></div>
-                <div class="rate-limit__label">requests today</div>
+                <div class="rate-limit__label">requests today · since 00:00</div>
                 <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
                   <span class="progress__bar" id="todayBar" style="width:0%"></span>
                 </div>
@@ -593,16 +780,17 @@
         <section id="budget" class="section">
           <header class="section__header">
             <h2>Daily Budget</h2>
-            <span class="section__sub" id="budgetSub">Usage today vs. configured target</span>
+            <span class="section__sub" id="budgetSub">Local monitoring target · today vs. target</span>
           </header>
 
           <div class="grid grid--3">
             <div class="card chart-card">
-              <div class="card__head"><h3>Budget target</h3><i class="info-icon" data-lucide="info" title="Daily token budget. Set TOKENMETRICS_DAILY_BUDGET to pin a value; otherwise a default estimate is used." tabindex="0"></i></div>
-              <div class="budget-target" id="budgetTarget"></div>
+              <div class="card__head"><h3>Budget target</h3><i class="info-icon" data-lucide="info" data-tip="Local monitoring target, not a provider-enforced limit. Set TOKENMETRICS_DAILY_BUDGET to pin a value; otherwise a default estimate is used." tabindex="0"></i></div>
+              <div class="budget-target" id="budgetTarget">—</div>
+              <div class="budget-target__meta" id="budgetTargetMeta">Configured daily target</div>
             </div>
             <div class="card chart-card">
-              <div class="card__head"><h3>Usage today</h3><i class="info-icon" data-lucide="info" title="Actual input + output tokens since 00:00 (calendar day) vs. the budget." tabindex="0"></i></div>
+              <div class="card__head"><h3>Usage today</h3><i class="info-icon" data-lucide="info" data-tip="Actual input + output tokens since 00:00 (calendar day) vs. the target. The percentage is NOT clamped to 100%." tabindex="0"></i></div>
               <div class="rate-limit" data-limit="budget">
                 <div class="rate-limit__value"><span class="rate-limit__used" id="budgetUsed">0</span><span class="rate-limit__sep">/</span><span class="rate-limit__limit" id="budgetLimit">?</span></div>
                 <div class="rate-limit__label">tokens / day · <span id="budgetRemaining">unknown</span> remaining</div>
@@ -610,17 +798,21 @@
                   <span class="progress__bar" id="budgetBar" style="width:0%"></span>
                 </div>
                 <div class="rate-limit__foot"><span class="status-badge" id="budgetBadge">OK</span><span class="rate-limit__pct" id="budgetPct">0%</span></div>
+                <div class="rate-limit__over" id="budgetOver" hidden></div>
+                <div class="budget-burn" id="budgetBurn" hidden></div>
               </div>
             </div>
             <div class="card chart-card">
-              <div class="card__head"><h3>Projection</h3><i class="info-icon" data-lucide="info" title="Extrapolated end-of-day usage if the current rate continues." tabindex="0"></i></div>
-              <div class="budget-projection" id="budgetProjection"></div>
+              <div class="card__head"><h3>Projection</h3><i class="info-icon" data-lucide="info" data-tip="End-of-day extrapolation if the current burn rate continues. Burn rate = tokens since 00:00 / elapsed hours." tabindex="0"></i></div>
+              <div class="budget-projection" id="budgetProjection">—</div>
+              <div class="budget-projection__meta" id="budgetProjectionMeta"></div>
+              <div class="budget-timing" id="budgetTiming"></div>
             </div>
           </div>
 
           <div class="card chart-card" style="margin-top:1rem">
             <div class="card__head">
-              <h3>Daily usage vs. budget</h3>
+              <h3>Daily usage vs. target</h3>
               <span class="card__meta" id="budgetChartMeta">last 14 days</span>
             </div>
             <div class="chart-wrap"><canvas id="budgetChart" height="240" aria-label="Daily token usage vs budget chart" role="img"></canvas></div>
@@ -655,6 +847,16 @@
       </div>
     </main>
   </div>
+
+  <!-- Session drawer -->
+  <div class="drawer-scrim" id="drawerScrim" hidden></div>
+  <aside class="drawer" id="sessionDrawer" aria-label="Session details" aria-hidden="true" hidden>
+    <header class="drawer__head">
+      <h3>Session details</h3>
+      <button class="icon-btn" id="sessionDrawerClose" type="button" aria-label="Close session panel" title="Close"><i data-lucide="x"></i></button>
+    </header>
+    <div class="drawer__body" id="sessionDrawerBody"></div>
+  </aside>
 
   <script type="module" src="static/js/main.js"></script>
   <div class="toast" id="toast" role="status" hidden></div>

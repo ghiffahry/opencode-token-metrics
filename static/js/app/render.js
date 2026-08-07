@@ -11,6 +11,7 @@ import { renderContext } from "../render/context.js";
 import { renderBudget } from "../render/budget.js";
 import { renderGraph } from "../render/graph.js";
 import { loadLiveRange, rangeTitle } from "../live/api.js";
+import { updateChips } from "../ui/chips.js";
 
 export function updateRangeButtons(rangeKey) {
   $all(".range-btn").forEach(function (b) {
@@ -49,4 +50,5 @@ export function selectRange(rangeKey) {
   state.page = 1;
   updateRangeButtons(rangeKey);
   loadLiveRange(rangeKey);
+  updateChips();
 }
