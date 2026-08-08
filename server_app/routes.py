@@ -6,7 +6,7 @@ import os
 import time
 
 from .cache import _cache, cache_get_or
-from .config import (ACTIVE_WINDOW_MS, ANALYTICS_TZ, BASE_DIR, DAILY_BUDGET_DEFAULT,
+from .config import (ACTIVE_WINDOW_MS, ANALYTICS_TZ, BASE_DIR,
                      DEFAULT_CONTEXT, GRAPH_JSON, GRAPH_VIEWS, MODELS_CACHE,
                      RANGES, RATE_LIMITS, RATE_LIMIT_SOURCES, db_path)
 from .context import context_usage, daily_budget

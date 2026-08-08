@@ -7,7 +7,7 @@ bridge does not need to be running.
 
 Usage:
   py tools/export_csv.py --range 7d
-  py tools/export_csv.py --range 30d --project "D:/Apps/AI/Project/journal-analyzer"
+  py tools/export_csv.py --range 30d --project "C:/Users/you/projects/my-app"
   py tools/export_csv.py --out runtime/exports
 """
 

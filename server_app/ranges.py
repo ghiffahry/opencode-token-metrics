@@ -12,7 +12,7 @@ try:
 except ImportError:
     ZoneInfo = None
 
-from .config import ANALYTICS_TZ, RANGES
+from .config import ANALYTICS_TZ, QUOTA_ANCHOR_HOUR, QUOTA_WINDOW_HOURS, RANGES
 
 def now_ms():
     return int(time.time() * 1000)
@@ -36,7 +36,10 @@ tzinfo._cache = {}
 def tz_offset_str():
     """Current UTC offset of the analytics tz, e.g. '+07:00'."""
     tz = tzinfo()
-    d = datetime.datetime.fromtimestamp(now_ms() / 1000, tz=tz) if tz else datetime.datetime.now()
+    if tz:
+        d = datetime.datetime.now(tz)
+    else:
+        d = datetime.datetime.now().astimezone()
     off = d.utcoffset() or datetime.timedelta(0)
     secs = int(off.total_seconds())
     sign = "+" if secs >= 0 else "-"
@@ -52,6 +55,40 @@ def day_start_ms(ts, tz=None):
         return int(datetime.datetime(d.year, d.month, d.day).timestamp() * 1000)
     d = datetime.datetime.fromtimestamp(ts / 1000, tz=tz)
     return int(datetime.datetime(d.year, d.month, d.day, tzinfo=tz).timestamp() * 1000)
+
+
+def quota_window_bounds(now=None, hours=None, anchor_hour=None):
+    """Estimated provider quota window - NOT a calendar day.
+
+    The free tier evaluates quota over a ~12-14h reset window that is not
+    aligned to midnight. We model it as windows of `hours` (default 14h)
+    drifting from a fixed local clock hour (default 04:00): each window is
+    exactly `hours` long and the reset moment is deterministic, but it is
+    always an *estimate* - the provider never publishes the true reset time.
+    """
+    if now is None:
+        now = now_ms()
+    hours = hours if hours is not None else QUOTA_WINDOW_HOURS
+    anchor_hour = anchor_hour if anchor_hour is not None else QUOTA_ANCHOR_HOUR
+    ms = max(1, int(hours * 3600_000))
+    tz = tzinfo()
+    if tz is None:
+        d = datetime.datetime.fromtimestamp(now / 1000)
+        anchor0 = int(datetime.datetime(d.year, d.month, d.day, anchor_hour).timestamp() * 1000)
+    else:
+        d = datetime.datetime.fromtimestamp(now / 1000, tz=tz)
+        anchor0 = int(datetime.datetime(d.year, d.month, d.day, anchor_hour, tzinfo=tz).timestamp() * 1000)
+    k = (now - anchor0) // ms          # floor division handles negative offsets
+    start = anchor0 + k * ms
+    end = start + ms
+    return {
+        "start": start,
+        "end": end,
+        "resetAt": end,
+        "elapsedMs": max(0, now - start),
+        "hours": hours,
+        "estimated": True,
+    }
 
 
 def _ts_local(ts):

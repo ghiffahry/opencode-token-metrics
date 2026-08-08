@@ -67,6 +67,7 @@
 
   --border: #e1e4e8;
   --border-strong: #d0d5db;
+  --border-subtle: #edf0f4;
 
   --accent: #3a6ea5;
   --accent-hover: #335f8e;
@@ -124,6 +125,7 @@
 
   --border: #2b2f33;
   --border-strong: #3c4043;
+  --border-subtle: rgba(255, 255, 255, 0.08);
 
   --accent: #70a7d8;
   --accent-hover: #8bb8e0;

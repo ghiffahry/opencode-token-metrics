@@ -1,7 +1,7 @@
 /* Realtime engine: live polling, boot/retry, DB banner, toast/status UI. */
 
 import { state, chartRegistry } from "../core/state.js";
-import { $, $all, formatTime, cssVar, hexToRgba, nf, formatTokens, clamp } from "../core/utils.js";
+import { $, $all, formatTime, cssVar, hexToRgba, nf, formatTokens } from "../core/utils.js";
 import { renderSessionTable, renderPerDay, renderRateLimits } from "../render/tables.js";
 import { renderLiveCounters, flashLiveCounters } from "../render/realtime.js";
 import {
@@ -41,11 +41,10 @@ export function liveTick() {
       if (rl) {
         rl.rpm.used = d.requestsLastMinute;
         rl.tpm.used = d.tokensLastMinute;
-        rl.rpd.used = d.today.requests;
-        if (rl.dtp) rl.dtp.used = d.today.tokens;
+        rl.rpd.used = d.window.requests;
+        if (rl.dtp) rl.dtp.used = d.window.tokens;
         renderRateLimits(state.view);
       }
-      renderTodayUsage(d.today);
       state.lastSyncAt = Date.now();
       $("#lastUpdateValue").textContent = formatTime(new Date());
       $("#footerStamp").textContent = "Updated " + formatTime(new Date());
@@ -63,27 +62,6 @@ export function liveTick() {
         setLiveStatus(false);
       }
     });
-}
-
-function renderTodayUsage(today) {
-  if (!today) return;
-  var req = $("#todayRequests");
-  var tok = $("#todayTokens");
-  var bar = $("#todayBar");
-  var badge = $("#todayBadge");
-  if (!req || !tok || !bar) return;
-  req.textContent = nf.format(today.requests);
-  tok.textContent = formatTokens(today.tokens) + " tokens";
-  var rl = state.view && state.view.rateLimits;
-  var pct = rl && rl.rpd && rl.rpd.limit
-    ? clamp((today.requests / rl.rpd.limit) * 100, 0, 100)
-    : 0;
-  bar.style.width = pct.toFixed(1) + "%";
-  bar.className = "progress__bar " + (pct >= 90 ? "is-danger" : pct >= 80 ? "is-warning" : "");
-  if (badge) {
-    badge.className = "status-badge status-badge--success";
-    badge.textContent = "since 00:00";
-  }
 }
 
 function pushStream(tin, tout) {
@@ -162,13 +140,12 @@ function renderQuotaInsight(view) {
   var daily = view && view.rateLimits && view.rateLimits.dtp;
   if (!quota || !daily) return;
   if (Number.isFinite(daily.limit)) {
-    quota.textContent = formatTokens(daily.limit) + " tokens";
-    if (daily.source === "configured") meta.textContent = "Configured target (TOKENMETRICS_DTP)";
-    else if (daily.source === "default") meta.textContent = "Default estimate - set TOKENMETRICS_DTP to override";
-    else meta.textContent = "Server-provided limit";
+    quota.textContent = formatTokens(daily.limit) + " / " + (daily.hours || 14) + "h";
+    if (daily.source === "configured") meta.textContent = "Configured quota (TOKENMETRICS_QUOTA_TOKENS)";
+    else meta.textContent = "Estimated 14h window · set TOKENMETRICS_QUOTA_TOKENS to pin";
   } else {
     quota.textContent = "Unknown";
-    meta.textContent = "Provider quota not exposed - set TOKENMETRICS_DTP to define";
+    meta.textContent = "Provider quota not exposed · set TOKENMETRICS_QUOTA_TOKENS to define";
   }
 }
 

@@ -22,7 +22,7 @@ dashboard-token/
 │   │   ├── layout.css       # App layout, sidebar, topbar
 │   │   ├── components.css   # Buttons, cards, tables, badges, footer, toast, ...
 │   │   ├── responsive.css   # Media queries & reduced motion
-│   │   └── widgets.css      # Context-usage widget, daily budget, custom range picker
+│   │   └── widgets.css      # Context-usage widget, token quota, custom range picker
 │   ├── favicon.svg          # Dashboard favicon
 │   ├── vendor/              # Offline copies of Chart.js, lucide, vis-network (no CDN)
 │   └── js/
@@ -63,7 +63,7 @@ py tools/build_desktop.py    # Build the desktop app with PyInstaller (add --bui
 Requires Python 3.8+ and `pywebview` (one-time: `py -m pip install pywebview`). The Microsoft Edge WebView2 runtime is preinstalled on most Windows 10/11 machines.
 
 ```bash
-cd D:\Apps\AI\Project\dashboard-token
+cd dashboard-token   # where you cloned this repo
 py app\desktop.py
 ```
 
@@ -124,7 +124,7 @@ Manual equivalent:
 
 ```powershell
 Start-Process py -ArgumentList "server.py","--port","8124" `
-  -WorkingDirectory "D:\Apps\AI\Project\dashboard-token" -WindowStyle Hidden
+  -WorkingDirectory (Get-Location) -WindowStyle Hidden
 ```
 
 Stop it with:
@@ -167,19 +167,19 @@ Base URL: `http://127.0.0.1:8124` (dev server; the desktop app uses a random por
 | `GET /api/overview?range=7d` | Aggregates: requests, tokens, latency, success rate, stages, daily buckets, rate limits |
 | `GET /api/models?range=7d` | Per-model aggregation incl. `contextLimit` / `contextUsed` |
 | `GET /api/context_usage?range=7d` | Context window usage: latest request (input/cached/output/reasoning vs limit), peak, per-model/session/agent aggregates, recent requests, estimated composition of the latest request |
-| `GET /api/budget` | Daily budget: today's usage vs `TOKENMETRICS_DAILY_BUDGET`, projection, 14-day history |
+| `GET /api/budget` | Token Quota: estimated quota window usage (`window`: limit, hours, anchor hour, burn rate, projection, exhaustion ETA, reset time, hourly `series`) + calendar-day `today` and 14-day `history` |
 | `GET /api/sessions?limit=50` | Session list (id, title, model, tokens, status, latency) |
 | `GET /api/requests?limit=60` | Latest requests (id, model, agent, tokens, latency, status, time) |
-| `GET /api/realtime` | Watermark + active sessions, RPM/TPM (last 1 min), tokens today |
+| `GET /api/realtime` | Watermark + active sessions, RPM/TPM (last 1 min), quota-window requests/tokens |
 | `GET /api/graph` | Knowledge graph from `graphify-out/graph.json` (see Knowledge Graph section below) |
 
-`range` values: `today`, `7d`, `30d`, `90d` (calendar ranges, default `today`), `24h` (rolling window: now − 24 h), and `custom` (requires `from=YYYY-MM-DD&to=YYYY-MM-DD`, both inclusive; dates are clamped to today). Calendar boundaries use `TOKENMETRICS_TZ` (default `Asia/Jakarta`); the database itself stays UTC epoch ms.
+`range` values: `today`, `7d`, `30d`, `90d` (calendar ranges, default `today`), `24h` (rolling window: now − 24 h), and `custom` (requires `from=YYYY-MM-DD&to=YYYY-MM-DD`, both inclusive; dates are clamped to today). Calendar boundaries use `TOKENMETRICS_TZ` (default: system local timezone; set it to pin an IANA zone such as `Asia/Jakarta`); the database itself stays UTC epoch ms.
 
-**Project filter:** `overview`, `models`, `sessions`, `requests`, and `realtime` accept `?project=<directory>` (URL-encoded) to restrict results to a single project directory, e.g. `GET /api/overview?project=D:/Apps/AI/Project/dashboard-token`. Use `GET /api/projects` to list valid values.
+**Project filter:** `overview`, `models`, `sessions`, `requests`, and `realtime` accept `?project=<directory>` (URL-encoded) to restrict results to a single project directory, e.g. `GET /api/overview?project=C:/Users/you/projects/my-app`. Use `GET /api/projects` to list valid values.
 
 **Context usage:** `tokens.total == input + output + reasoning + cache.read` in the database, but no per-category attribution is stored, so the composition breakdown is an explicit **estimated** heuristic (splits only the real input total of the latest request across categories read from the workspace files; it never invents tokens). Everything else (window utilisation, peaks, aggregates) is actuals from the database.
 
-**Daily budget:** `TOKENMETRICS_DAILY_BUDGET` (tokens/day) pins the target (labelled `configured`); unset, the default estimate `400_000` is used and labelled `default`. The projection extrapolates today's rate to end of day.
+**Token quota (Free-Tier Quota):** the opencode free tier grants roughly 2.5M tokens per ~14 h reset window; the dashboard models it as an estimated sliding window anchored at `QUOTA_ANCHOR_HOUR` (default 04:00 local, so the shift never happens at your off-midnight usage of the window — the anchor choice only changes where the reset lands). `TOKENMETRICS_QUOTA_TOKENS` (tokens per window) and `TOKENMETRICS_QUOTA_WINDOW_HOURS` pin the values (labelled `configured`); unset, defaults `2_500_000` / `14` are used and labelled `default`. The window is **estimated** — the reset is never claimed to be exact provider timing. Percentages are raw (not clamped to 100%). Status tiers (HEALTHY / WATCH / HIGH / CRITICAL / EXHAUSTION RISK) are dashboard interpretation thresholds on projected usage at reset, not provider rules. Calendar-day usage stays separate (`today` / `history`).
 
 Responses are JSON, cached briefly server-side (overview 3 s, models 5 s, sessions/requests 2 s, realtime 1.5 s).
 
@@ -211,12 +211,15 @@ The dashboard sidebar has a **Knowledge Graph** section that visualizes the code
 | `PORT` / `HOST` | `8124` / `127.0.0.1` | Listen address (also `--port` / `--host`) |
 | `DB_PATH` | `~/.local/share/opencode/opencode.db` | Real opencode database (read-only connection, WAL-safe) |
 | `MODELS_CACHE` | `~/.cache/opencode/models.json` | Models.dev cache used for context-window limits |
-| `MODEL_CONTEXT_OVERRIDES` | `ollama/qwen2.5-coder:7b`, `ollama/gleidsonnunes/Claude-Sonnet-4.6:latest` | Context limits for models missing from the models.dev cache (e.g. local ollama models) - add your own here |
+| `MODEL_CONTEXT_OVERRIDES` | `ollama/qwen2.5-coder:7b` | Context limits for models missing from the models.dev cache (e.g. local ollama models) - add your own here |
 | `DEFAULT_CONTEXT` | `200_000` | Fallback context limit when a model is unknown |
 | `ACTIVE_WINDOW_MS` | `5 * 60_000` | Session counts as *active* if updated within 5 minutes |
-| `TOKENMETRICS_RPM`, `TOKENMETRICS_TPM`, `TOKENMETRICS_RPD`, `TOKENMETRICS_DTP` | unset (falls back to estimates) | Verified quotas. OpenCode's local DB does not expose provider/account limits, so unset values use community estimates (`60` / `250000` / `200` / `400000`, editable in `RATE_LIMIT_DEFAULTS`) and are labelled `Estimated default`; set a `TOKENMETRICS_*` env var to pin a verified limit (labelled `configured`) |
-| `TOKENMETRICS_TZ` | `Asia/Jakarta` | Timezone for calendar day boundaries (`today`, daily budget, per-day buckets). Requires Python 3.9+ (`zoneinfo`); older Pythons fall back to local time |
-| `TOKENMETRICS_DAILY_BUDGET` | `400_000` (`DAILY_BUDGET_DEFAULT`) | Daily token budget for the Daily Budget section; `configured` when set, otherwise `default` |
+| `TOKENMETRICS_RPM`, `TOKENMETRICS_TPM`, `TOKENMETRICS_RPD`, `TOKENMETRICS_DTP` | unset (falls back to estimates) | Verified quotas. OpenCode's local DB does not expose provider/account limits, so unset values use community estimates (`60` / `250000` / `200` / `2500000`, editable in `RATE_LIMIT_DEFAULTS`) and are labelled `Estimated default`; set a `TOKENMETRICS_*` env var to pin a verified limit (labelled `configured`). RPD/DTP track the estimated quota window, not a calendar day |
+| `TOKENMETRICS_TZ` | system local time (unset) | Timezone for calendar day boundaries (`today`, per-day buckets, quota-window anchor). Set an IANA name to pin it (e.g. `Asia/Jakarta`). Requires Python 3.9+ (`zoneinfo`); older Pythons fall back to local time |
+| `TOKENMETRICS_QUOTA_TOKENS` | `2_500_000` (`QUOTA_LIMIT_DEFAULT`) | Free-tier token quota per reset window for the Token Quota section; `configured` when set, otherwise `default` |
+| `TOKENMETRICS_QUOTA_WINDOW_HOURS` | `14` (`QUOTA_WINDOW_HOURS`) | Estimated reset-window length for the Token Quota section |
+| `QUOTA_ANCHOR_HOUR` | `4` | Local hour the estimated 14 h window starts on (reset lands at `anchor + 14h`; set to change where the reset lands) |
+| `TOKENMETRICS_REQUEST_QUOTA` | `200` (`REQUEST_QUOTA_DEFAULT`) | Estimated request budget per quota window |
 | `RANGES` | `today/7d/30d/90d` (+ `24h`, `custom`) | Aggregation windows and bucket counts |
 
 KPI deltas and the efficiency baseline are computed from the immediately-prior window of the same length (`_prev_overview`), never from hardcoded constants.
@@ -249,7 +252,7 @@ py tools/skill_install.py   # idempotent: installs CLI + skill, registers openco
 What it does:
 
 1. Ensures the CLI is available - `uv tool install graphifyy` (falls back to `pipx`, then `pip --user`).
-2. Copies the OpenCode skill (`SKILL.md` + `references/`) into `D:\Apps\AI\OpenCode\skill\graphify`.
+2. Copies the OpenCode skill (`SKILL.md` + `references/`) into `SKILLS_DIR/graphify` (default `~/.config/opencode/skills`; override with the `OPENCODE_SKILLS_DIR` env var).
 3. Runs `graphify opencode install`, which adds a section to `AGENTS.md` and registers a `.opencode/plugins/graphify.js` `tool.execute.before` hook + plugin entry in `.opencode/opencode.json`.
 
 Useful commands:

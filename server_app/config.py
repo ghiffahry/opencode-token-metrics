@@ -51,17 +51,56 @@ DEFAULT_CONTEXT = 200_000
 ACTIVE_WINDOW_MS = 5 * 60_000          # session "active" if updated within 5 min
 # Calendar analytics run in this timezone (IANA name). Database timestamps stay
 # absolute epoch-ms; only calendar boundaries are computed in this tz.
-ANALYTICS_TZ = os.environ.get("TOKENMETRICS_TZ", "Asia/Jakarta")
-# Daily budget target used by /api/budget when TOKENMETRICS_DAILY_BUDGET is unset.
-DAILY_BUDGET_DEFAULT = 400_000
+# Defaults to the system local timezone; set TOKENMETRICS_TZ to pin an explicit
+# IANA zone (e.g. Asia/Jakarta).
+ANALYTICS_TZ = os.environ.get("TOKENMETRICS_TZ")
+# Free-tier quota: NOT a calendar-day budget. The opencode free tier grants
+# roughly 2.5M tokens per ~12-14h reset window; the dashboard models it as an
+# estimated `QUOTA_WINDOW_HOURS` window anchored at a fixed local clock hour
+# (never midnight) and every reset is labelled "Estimated" - the provider does
+# not publish the exact reset timestamp. Set the matching TOKENMETRICS_* env
+# var to pin a verified value (the UI then labels it "configured").
+QUOTA_LIMIT_DEFAULT = 2_500_000
+QUOTA_WINDOW_HOURS = 14
+QUOTA_ANCHOR_HOUR = 4          # local hour the 14h windows drift from
+REQUEST_QUOTA_DEFAULT = 200
 # Fallback char/4 estimates for context categories the database never records.
 CONTEXT_ESTIMATE_DEFAULTS = {"system_prompt": 3000, "tool_definitions": 2500}
+
+
+def quota_config():
+    """Free-tier quota knobs: (value, source) per setting.
+
+    source is "configured" when a matching TOKENMETRICS_* env var is set,
+    otherwise "default" - a labelled estimate, never a provider fact.
+    TOKENMETRICS_QUOTA_TOKENS / TOKENMETRICS_DTP pin the token limit and
+    TOKENMETRICS_REQUEST_QUOTA / TOKENMETRICS_RPD pin the request quota.
+    """
+    def _env(default, *names):
+        for name in names:
+            raw = os.environ.get("TOKENMETRICS_%s" % name)
+            if raw is None:
+                continue
+            try:
+                return int(raw), "configured"
+            except ValueError:
+                return default, "configured"
+        return default, "default"
+    limit, limit_source = _env(QUOTA_LIMIT_DEFAULT, "QUOTA_TOKENS", "DTP")
+    hours, hours_source = _env(QUOTA_WINDOW_HOURS, "QUOTA_WINDOW_HOURS")
+    anchor, _ = _env(QUOTA_ANCHOR_HOUR, "QUOTA_ANCHOR_HOUR")
+    req, req_source = _env(REQUEST_QUOTA_DEFAULT, "REQUEST_QUOTA", "RPD")
+    return {"limit": limit, "limitSource": limit_source,
+            "hours": hours, "hoursSource": hours_source,
+            "anchorHour": anchor, "requestLimit": req,
+            "requestSource": req_source}
+
+
 # The local database records usage, but never provider/account quotas. The
-# opencode free tier does not publish limits (dynamic, per-IP, reset ~00:00
-# local); the defaults below are community estimates (~200 req/day and
-# ~0.3-0.5M tokens/day). Set the matching TOKENMETRICS_* env var to pin a
-# verified value - the UI then labels the limit as "configured".
-RATE_LIMIT_DEFAULTS = {"rpm": 60, "tpm": 250_000, "rpd": 200, "dtp": 400_000}
+# per-minute limits below are community estimates; set the matching
+# TOKENMETRICS_* env var to pin a verified value - the UI then labels the
+# limit as "configured". rpd/dtp follow the free-tier quota window.
+RATE_LIMIT_DEFAULTS = {"rpm": 60, "tpm": 250_000}
 
 
 def _limit_for(name):
@@ -74,16 +113,24 @@ def _limit_for(name):
     return RATE_LIMIT_DEFAULTS.get(name), "default"
 
 
-RATE_LIMITS = {}
-RATE_LIMIT_SOURCES = {}
-for _name in RATE_LIMIT_DEFAULTS:
-    RATE_LIMITS[_name], RATE_LIMIT_SOURCES[_name] = _limit_for(_name)
+_QUOTA_CFG = quota_config()
+RATE_LIMITS = {
+    "rpm": _limit_for("rpm")[0],
+    "tpm": _limit_for("tpm")[0],
+    "rpd": _QUOTA_CFG["requestLimit"],
+    "dtp": _QUOTA_CFG["limit"],
+}
+RATE_LIMIT_SOURCES = {
+    "rpm": _limit_for("rpm")[1],
+    "tpm": _limit_for("tpm")[1],
+    "rpd": _QUOTA_CFG["requestSource"],
+    "dtp": _QUOTA_CFG["limitSource"],
+}
 
 # Context-window overrides for models the models.dev cache does not describe
 # (e.g. local ollama models). Add more entries as needed.
 MODEL_CONTEXT_OVERRIDES = {
     "ollama/qwen2.5-coder:7b": 32_768,
-    "ollama/gleidsonnunes/Claude-Sonnet-4.6:latest": 200_000,
 }
 
 RANGES = {

@@ -22,7 +22,15 @@ DEFAULT_PORT = 8124
 DB_PATH = Path.home() / ".local" / "share" / "opencode" / "opencode.db"
 MODELS_CACHE = Path.home() / ".cache" / "opencode" / "models.json"
 
-SKILLS_DIR = Path(r"D:\Apps\AI\OpenCode\skill")
+def _skills_dir():
+    """OpenCode skills directory (env override, else standard user location)."""
+    env = os.environ.get("OPENCODE_SKILLS_DIR")
+    if env:
+        return Path(env)
+    return Path.home() / ".config" / "opencode" / "skills"
+
+
+SKILLS_DIR = _skills_dir()
 
 
 def ensure_dirs():

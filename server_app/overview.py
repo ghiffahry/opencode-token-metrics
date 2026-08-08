@@ -3,12 +3,12 @@
 import datetime
 import json
 
-from .config import (ACTIVE_WINDOW_MS, ANALYTICS_TZ, DAILY_BUDGET_DEFAULT,
-                     DEFAULT_CONTEXT, RANGES, RATE_LIMITS, RATE_LIMIT_SOURCES)
+from .config import (ACTIVE_WINDOW_MS, ANALYTICS_TZ, DEFAULT_CONTEXT,
+                     RANGES, RATE_LIMITS, RATE_LIMIT_SOURCES, quota_config)
 from .db import (context_for, load_context_map, message_model, msg_duration_seconds,
                  msg_scope, parse_model, part_scope, q, session_scope, _msg_model_cond)
-from .ranges import (_ts_local, build_buckets, day_start_ms, now_ms,
-                     prev_bounds, range_bounds, range_detail)
+from .ranges import (_ts_local, build_buckets, now_ms,
+                     prev_bounds, quota_window_bounds, range_bounds, range_detail)
 
 def overview(range_key, project=None, model=None, from_date=None, to_date=None):
     cfg = RANGES.get(range_key)
@@ -19,7 +19,6 @@ def overview(range_key, project=None, model=None, from_date=None, to_date=None):
     if start is None:
         return _empty_overview("custom", project, from_date, to_date)
     prev_start, prev_end = prev_bounds(range_key, start, end, from_date, to_date)
-    day_start = day_start_ms(now)
     min1 = now - 60_000
     m_sql, m_par = msg_scope(project, model)
     p_sql, p_par = part_scope(project, model)
@@ -57,7 +56,7 @@ def overview(range_key, project=None, model=None, from_date=None, to_date=None):
     requests = 0
     durations = []
     stage_agg = {}
-    today_req = today_tokens = rpm = tpm = 0
+    rpm = tpm = 0
     for r in cur_rows:
         tin = int(r["tokens_input"] or 0)
         tout = int(r["tokens_output"] or 0)
@@ -75,13 +74,24 @@ def overview(range_key, project=None, model=None, from_date=None, to_date=None):
         g["input"] += tin
         g["output"] += tout
         ts = r["time_created"]
-        if ts >= day_start:
-            today_req += 1
-            today_tokens += tin + tout
         if ts >= min1:
             rpm += 1
             if r["time_completed"]:
                 tpm += tin + tout
+
+    # Quota-window usage (estimated 14h window, NOT the calendar day) for the
+    # rpd/dtp rate-limit cards. The window is anchored independently of the
+    # selected analytics range - it is a live provider-quota metric.
+    wb = quota_window_bounds(now)
+    win_rows = q("SELECT json_extract(data, '$.tokens.input') AS tokens_input, "
+                 "json_extract(data, '$.tokens.output') AS tokens_output "
+                 "FROM message WHERE time_created >= ? AND time_created < ? "
+                 "AND json_extract(data, '$.role') = 'assistant' "
+                 "AND json_extract(data, '$.modelID') IS NOT NULL" + m_sql,
+                 (wb["start"], now) + m_par)
+    win_req = len(win_rows)
+    win_tokens = sum(int(r["tokens_input"] or 0) + int(r["tokens_output"] or 0)
+                     for r in win_rows)
 
     prev_input = prev_output = prev_requests = 0
     prev_durations = []
@@ -143,8 +153,10 @@ def overview(range_key, project=None, model=None, from_date=None, to_date=None):
         "rateLimits": {
             "rpm": {"used": rpm, "limit": RATE_LIMITS["rpm"], "source": RATE_LIMIT_SOURCES["rpm"]},
             "tpm": {"used": tpm, "limit": RATE_LIMITS["tpm"], "source": RATE_LIMIT_SOURCES["tpm"]},
-            "rpd": {"used": today_req, "limit": RATE_LIMITS["rpd"], "source": RATE_LIMIT_SOURCES["rpd"]},
-            "dtp": {"used": today_tokens, "limit": RATE_LIMITS["dtp"], "source": RATE_LIMIT_SOURCES["dtp"]},
+            "rpd": {"used": win_req, "limit": RATE_LIMITS["rpd"], "source": RATE_LIMIT_SOURCES["rpd"],
+                    "hours": wb["hours"]},
+            "dtp": {"used": win_tokens, "limit": RATE_LIMITS["dtp"], "source": RATE_LIMIT_SOURCES["dtp"],
+                    "hours": wb["hours"]},
         },
         "prev": {
             "requests": prev_requests,
@@ -400,23 +412,23 @@ def requests_list(limit=50, project=None, model=None):
 def realtime(project=None, model=None):
     now = now_ms()
     min1 = now - 60_000
-    today = day_start_ms(now)
+    wb = quota_window_bounds(now)
     limits = load_context_map()
     m_sql, m_par = msg_scope(project, model)
 
     watermark_row = q("SELECT id FROM event ORDER BY id DESC LIMIT 1")
     watermark = watermark_row[0]["id"] if watermark_row else ""
 
-    today_requests = q("SELECT 1 FROM message WHERE time_created >= ? "
-                       "AND json_extract(data, '$.role') = 'assistant' "
-                       "AND json_extract(data, '$.modelID') IS NOT NULL" + m_sql,
-                       (today,) + m_par)
-    today_tokens = q("SELECT json_extract(data, '$.tokens.input') AS tokens_input, "
-                     "json_extract(data, '$.tokens.output') AS tokens_output, "
-                     "json_extract(data, '$.tokens.cache.read') AS tokens_cache_read "
-                     "FROM message WHERE time_created >= ? "
-                     "AND json_extract(data, '$.role') = 'assistant'"
-                     + m_sql, (today,) + m_par)
+    win_requests = q("SELECT 1 FROM message WHERE time_created >= ? "
+                     "AND json_extract(data, '$.role') = 'assistant' "
+                     "AND json_extract(data, '$.modelID') IS NOT NULL" + m_sql,
+                     (wb["start"],) + m_par)
+    win_tokens = q("SELECT json_extract(data, '$.tokens.input') AS tokens_input, "
+                   "json_extract(data, '$.tokens.output') AS tokens_output, "
+                   "json_extract(data, '$.tokens.cache.read') AS tokens_cache_read "
+                   "FROM message WHERE time_created >= ? "
+                   "AND json_extract(data, '$.role') = 'assistant'"
+                   + m_sql, (wb["start"],) + m_par)
     rpm = q("SELECT 1 FROM message WHERE time_created >= ? "
             "AND json_extract(data, '$.role') = 'assistant' "
             "AND json_extract(data, '$.modelID') IS NOT NULL" + m_sql, (min1,) + m_par)
@@ -443,12 +455,15 @@ def realtime(project=None, model=None):
         "activeSessions": len(active),
         "requestsLastMinute": len(rpm),
         "tokensLastMinute": tpm,
-        "today": {
-            "requests": len(today_requests),
-            "input": sum(int(r["tokens_input"] or 0) for r in today_tokens),
-            "output": sum(int(r["tokens_output"] or 0) for r in today_tokens),
-            "cacheRead": sum(int(r["tokens_cache_read"] or 0) for r in today_tokens),
-            "tokens": sum(int(r["tokens_input"] or 0) + int(r["tokens_output"] or 0) for r in today_tokens),
+        "window": {
+            "start": wb["start"],
+            "end": wb["end"],
+            "resetAt": wb["resetAt"],
+            "requests": len(win_requests),
+            "input": sum(int(r["tokens_input"] or 0) for r in win_tokens),
+            "output": sum(int(r["tokens_output"] or 0) for r in win_tokens),
+            "cacheRead": sum(int(r["tokens_cache_read"] or 0) for r in win_tokens),
+            "tokens": sum(int(r["tokens_input"] or 0) + int(r["tokens_output"] or 0) for r in win_tokens),
         },
         "sessions": sess,
         "generated": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -514,12 +529,21 @@ def _empty_payload(path, query, project):
                 "bySession": [], "byAgent": [], "byDay": [], "requests": [],
                 "composition": None, "counts": {"requests": 0}}
     if path == "/api/budget":
-        return {"today": {"requests": 0, "input": 0, "output": 0, "cacheRead": 0, "tokens": 0},
-                "config": {"target": DAILY_BUDGET_DEFAULT, "source": "default",
-                           "note": "default estimate - set TOKENMETRICS_DAILY_BUDGET to pin a value"},
-                "projectedToday": 0, "remaining": DAILY_BUDGET_DEFAULT, "pct": 0,
-                "history": [], "timezone": ANALYTICS_TZ,
-                "generated": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+        qc = quota_config()
+        return {
+            "window": {"limit": qc["limit"], "hours": qc["hours"], "anchorHour": qc["anchorHour"],
+                       "source": qc["limitSource"], "estimated": True, "start": 0, "end": 0,
+                       "resetAt": 0, "used": 0, "remaining": qc["limit"], "pct": 0,
+                       "requests": 0, "requestLimit": qc["requestLimit"], "requestPct": 0,
+                       "elapsedHours": 0, "hoursRemaining": qc["hours"],
+                       "burnRate": None, "projectedAtReset": None, "projectedPct": None,
+                       "timeToExhaustionMs": None, "willExhaustBeforeReset": False,
+                       "status": "healthy", "series": []},
+            "today": {"requests": 0, "input": 0, "output": 0, "cacheRead": 0, "tokens": 0},
+            "config": {"target": qc["limit"], "source": qc["limitSource"],
+                       "note": "estimated free-tier quota - set TOKENMETRICS_QUOTA_TOKENS to pin a value"},
+            "history": [], "timezone": ANALYTICS_TZ,
+            "generated": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
     if path == "/api/sessions":
         return {"sessions": []}
     if path == "/api/requests":
@@ -530,8 +554,8 @@ def _empty_payload(path, query, project):
             "activeSessions": 0,
             "requestsLastMinute": 0,
             "tokensLastMinute": 0,
-            "today": {"requests": 0, "input": 0, "output": 0,
-                      "cacheRead": 0, "tokens": 0},
+            "window": {"start": 0, "end": 0, "resetAt": 0, "requests": 0,
+                       "input": 0, "output": 0, "cacheRead": 0, "tokens": 0},
             "sessions": [],
             "generated": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         }

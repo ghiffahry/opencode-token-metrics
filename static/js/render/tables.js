@@ -210,8 +210,8 @@ export function renderRateLimit(key, data, fmt) {
   if (label && (key === "rpd" || key === "dtp")) {
     var kind = data.source === "configured" ? "configured target" : "estimated target";
     label.innerHTML = key === "rpd"
-      ? "requests / day · " + kind
-      : 'tokens / day · <span id="dtpRemaining">' + (known ? nf.format(Math.max(0, data.limit - data.used)) : "unknown") + "</span> remaining · " + kind;
+      ? "requests / window · " + kind
+      : "tokens / window · " + kind;
   } else if (rem) {
     rem.textContent = known ? nf.format(Math.max(0, data.limit - data.used)) : "unknown";
   }

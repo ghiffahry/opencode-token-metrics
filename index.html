@@ -113,7 +113,7 @@
               <i data-lucide="gauge"></i><span class="nav-label">Rate Limits</span>
             </a>
             <a class="nav-item" href="#budget" data-section="budget">
-              <i data-lucide="coins"></i><span class="nav-label">Daily Budget</span>
+              <i data-lucide="coins"></i><span class="nav-label">Token Quota</span>
             </a>
           </div>
         </div>
@@ -225,7 +225,7 @@
             <input type="date" id="customFrom" class="custom-range__input" aria-label="Custom range start" />
             <label class="custom-range__label" for="customTo">To</label>
             <input type="date" id="customTo" class="custom-range__input" aria-label="Custom range end" />
-            <span class="custom-range__tz">Timezone: Asia/Jakarta</span>
+            <span class="custom-range__tz">Timezone: local</span>
             <button class="btn btn--primary" id="customApply" type="button">Apply</button>
             <button class="btn btn--ghost" id="customCancel" type="button">Cancel</button>
           </div>
@@ -261,9 +261,9 @@
             <div class="status-item">
               <i data-lucide="calendar-clock" class="status-item__icon"></i>
               <div class="status-item__body">
-                <span class="status-item__label">Daily budget</span>
+                <span class="status-item__label">Token quota</span>
                 <strong id="dailyQuotaValue">Unknown</strong>
-                <small id="dailyQuotaMeta">Provider limit is not published</small>
+                <small id="dailyQuotaMeta">Estimated 14h window · set TOKENMETRICS_QUOTA_TOKENS to pin</small>
               </div>
             </div>
             <div class="status-item">
@@ -736,10 +736,10 @@
               </div>
             </div>
             <div class="card chart-card" id="rpdCard">
-              <div class="card__head"><h3>Requests per day</h3><i class="info-icon" data-lucide="info" data-tip="Requests since 00:00 (local calendar day). The daily limit is an estimate (default 200) — set TOKENMETRICS_RPD to pin a verified value." tabindex="0"></i></div>
+              <div class="card__head"><h3>Requests — quota window</h3><i class="info-icon" data-lucide="info" data-tip="Requests completed inside the estimated 14h quota window (NOT a calendar day). The limit is an estimate (default 200) — set TOKENMETRICS_REQUEST_QUOTA to pin a verified value." tabindex="0"></i></div>
               <div class="rate-limit" data-limit="rpd">
                 <div class="rate-limit__value"><span class="rate-limit__used" id="rpdUsed">0</span><span class="rate-limit__sep">/</span><span class="rate-limit__limit" id="rpdLimit">200</span></div>
-                <div class="rate-limit__label" id="rpdLabel">requests / day · configured target</div>
+                <div class="rate-limit__label" id="rpdLabel">requests / 14h window · estimated</div>
                 <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
                   <span class="progress__bar" id="rpdBar" style="width:0%"></span>
                 </div>
@@ -748,80 +748,170 @@
               </div>
             </div>
           </div>
+        </section>
 
-          <div class="grid grid--2" style="margin-top:1rem">
-            <div class="card chart-card" id="dtpCard">
-              <div class="card__head"><h3>Daily token usage</h3><i class="info-icon" data-lucide="info" data-tip="Input + output tokens since 00:00. The daily quota is a local estimate (default 400K) — set TOKENMETRICS_DTP to pin a verified value. Not a provider-enforced limit." tabindex="0"></i></div>
-              <div class="rate-limit" data-limit="dtp">
-                <div class="rate-limit__value"><span class="rate-limit__used" id="dtpUsed">0</span><span class="rate-limit__sep">/</span><span class="rate-limit__limit" id="dtpLimit">?</span></div>
-                <div class="rate-limit__label" id="dtpLabel">tokens / day · <span id="dtpRemaining">unknown</span> remaining</div>
-                <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-                  <span class="progress__bar" id="dtpBar" style="width:0%"></span>
+        <!-- Token Quota -->
+        <section id="budget" class="section">
+          <header class="section__header">
+            <h2>Token Quota</h2>
+            <span class="section__sub" id="budgetSub">2.5M tokens · 14h quota window</span>
+            <span class="section__aside" id="quotaModelMeta" hidden>Quota varies by model</span>
+          </header>
+
+          <div class="quota-grid">
+            <div class="card chart-card qcard qcard--quota">
+              <div class="card__head"><h3>Quota</h3><i class="info-icon" data-lucide="info" data-tip="Estimated free-tier token quota for the current model and quota window. Not a calendar-day budget." tabindex="0"></i></div>
+              <div class="qcard__body">
+                <div class="quota-primary">
+                  <div class="quota-primary__value metric-xl" id="quotaLimit">2.5M</div>
+                  <div class="quota-primary__label">tokens / <span id="quotaLimitSub">14h</span></div>
                 </div>
-                <div class="rate-limit__foot"><span class="status-badge" id="dtpBadge">OK</span><span class="rate-limit__pct" id="dtpPct">0%</span></div>
-                <div class="rate-limit__over" id="dtpOver" hidden></div>
+                <div class="q-divider"></div>
+                <div class="quota-secondary">
+                  <div class="quota-secondary__cell">
+                    <span class="q-label">Used</span>
+                    <strong class="q-value" id="quotaUsed">0</strong>
+                  </div>
+                  <div class="quota-secondary__cell">
+                    <span class="q-label">Remaining</span>
+                    <strong class="q-value" id="quotaRemaining">—</strong>
+                  </div>
+                </div>
+                <div class="quota-utilization">
+                  <div class="quota-utilization__head">
+                    <span class="q-label">Utilization</span>
+                    <span class="q-util__pct" id="quotaUtilPct">0%</span>
+                  </div>
+                  <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                    <span class="progress__bar" id="quotaBar" style="width:0%"></span>
+                  </div>
+                </div>
+                <div class="quota-footer">
+                  <span class="quota-footer__text" id="quotaSource">Estimated free-tier limit</span>
+                </div>
               </div>
             </div>
-            <div class="card chart-card" id="rpdTodayCard">
-              <div class="card__head"><h3>Usage today</h3><i class="info-icon" data-lucide="info" data-tip="Requests and tokens actually consumed since 00:00 local calendar day (Asia/Jakarta)." tabindex="0"></i></div>
-              <div class="rate-limit">
-                <div class="rate-limit__value"><span class="rate-limit__used" id="todayRequests">0</span></div>
-                <div class="rate-limit__label">requests today · since 00:00</div>
-                <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-                  <span class="progress__bar" id="todayBar" style="width:0%"></span>
+
+            <div class="card chart-card qcard qcard--usage">
+              <div class="card__head"><h3>Current Usage</h3><i class="info-icon" data-lucide="info" data-tip="Tokens consumed since the beginning of the current quota window." tabindex="0"></i></div>
+              <div class="qcard__body">
+                <div class="q-usage">
+                  <div class="q-usage__value metric-lg">
+                    <strong class="q-usage__used" id="budgetUsed">0</strong><span class="q-usage__sep">/</span><span class="q-usage__limit" id="budgetLimit">—</span>
+                  </div>
+                  <div class="q-usage__pct" id="budgetPct">0% used</div>
+                  <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                    <span class="progress__bar" id="budgetBar" style="width:0%"></span>
+                  </div>
                 </div>
-                <div class="rate-limit__foot"><span class="status-badge" id="todayBadge">today</span><span class="rate-limit__pct" id="todayTokens">0 tokens</span></div>
+                <div class="q-divider"></div>
+                <div class="q-grid">
+                  <div class="q-grid__cell">
+                    <span class="q-label">Burn rate</span>
+                    <strong class="q-value" id="quotaBurn">—</strong>
+                  </div>
+                  <div class="q-grid__cell">
+                    <span class="q-label">Requests</span>
+                    <strong class="q-value" id="quotaRequests">0 / 0</strong>
+                  </div>
+                </div>
+                <div class="q-status" id="quotaStatusPill" hidden>
+                  <span class="q-status__dot" aria-hidden="true"></span>
+                  <span class="q-status__tier" id="quotaStatusText">HEALTHY</span>
+                </div>
+                <div class="q-divider"></div>
+                <div class="q-burn">
+                  <div class="q-burn__head">
+                    <span class="q-label">Token burn rate</span>
+                    <strong class="q-burn__rate" id="quotaBurnRate">—</strong>
+                  </div>
+                  <div class="q-burn__chart"><canvas id="burnChart" height="88" aria-label="Token consumption per hour within the current quota window chart" role="img"></canvas></div>
+                  <div class="q-burn__empty" id="burnEmpty" hidden>Not enough data in this window</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card chart-card qcard qcard--projection">
+              <div class="card__head"><h3>Reset &amp; Projection</h3><i class="info-icon" data-lucide="info" data-tip="Projection estimates token usage at the next quota reset using the current burn rate." tabindex="0"></i></div>
+              <div class="qcard__body">
+                <div class="q-reset">
+                  <span class="q-label">Quota reset</span>
+                  <div class="q-reset__count metric-lg" id="quotaResetCount">—</div>
+                  <div class="q-reset__next">Estimated next reset · <strong id="quotaResetNext">—</strong></div>
+                </div>
+                <div class="q-divider"></div>
+                <div class="q-proj">
+                  <span class="q-label">Projected at reset</span>
+                  <div class="q-proj__value metric-lg" id="budgetProjection">—</div>
+                  <div class="q-proj__pct" id="budgetProjectionMeta">—</div>
+                  <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                    <span class="progress__bar" id="projBar" style="width:0%"></span>
+                  </div>
+                </div>
+                <div class="q-cmp">
+                  <div class="q-cmp__cell">
+                    <span class="q-label">Current</span>
+                    <strong class="q-value" id="cmpCurrent">—</strong>
+                  </div>
+                  <div class="q-cmp__arrow" aria-hidden="true"></div>
+                  <div class="q-cmp__cell">
+                    <span class="q-label">Projected</span>
+                    <strong class="q-value" id="cmpProjected">—</strong>
+                  </div>
+                  <div class="q-cmp__growth">
+                    <span class="q-label">Growth</span>
+                    <strong class="q-value" id="cmpGrowth">—</strong>
+                  </div>
+                </div>
+                <div class="q-divider"></div>
+                <div class="q-exposure" id="quotaExposure" hidden>
+                  <span class="q-status__dot" aria-hidden="true"></span>
+                  <span id="exposureText">Safe until reset</span>
+                </div>
               </div>
             </div>
           </div>
-        </section>
 
-        <!-- Daily Budget -->
-        <section id="budget" class="section">
-          <header class="section__header">
-            <h2>Daily Budget</h2>
-            <span class="section__sub" id="budgetSub">Local monitoring target · today vs. target</span>
-          </header>
+          <div class="quota-timeline" id="quotaTimeline" hidden title="Estimated 14h window · reset is not tied to midnight">
+            <div class="quota-timeline__head">
+              <span class="quota-timeline__title">Quota window</span>
+            </div>
+            <div class="quota-timeline__row" id="quotaTimelineRow">
+              <span class="quota-timeline__item">
+                <span class="quota-timeline__time" id="quotaTimelineStart">—</span>
+                <span class="quota-timeline__itemlabel">Reset</span>
+              </span>
+              <span class="quota-timeline__item quota-timeline__item--now" id="quotaTimelineNowCell">
+                <span class="quota-timeline__time" id="quotaTimelineNowTime">—</span>
+                <span class="quota-timeline__itemlabel">Now</span>
+              </span>
+              <span class="quota-timeline__item">
+                <span class="quota-timeline__time" id="quotaTimelineEnd">—</span>
+                <span class="quota-timeline__itemlabel">Next reset</span>
+              </span>
+            </div>
+            <div class="quota-timeline__track">
+              <span class="quota-timeline__marker" id="quotaTimelineMarker" aria-hidden="true"></span>
+            </div>
+          </div>
 
-          <div class="grid grid--3">
-            <div class="card chart-card">
-              <div class="card__head"><h3>Budget target</h3><i class="info-icon" data-lucide="info" data-tip="Local monitoring target, not a provider-enforced limit. Set TOKENMETRICS_DAILY_BUDGET to pin a value; otherwise a default estimate is used." tabindex="0"></i></div>
-              <div class="budget-target" id="budgetTarget">—</div>
-              <div class="budget-target__meta" id="budgetTargetMeta">Configured daily target</div>
-            </div>
-            <div class="card chart-card">
-              <div class="card__head"><h3>Usage today</h3><i class="info-icon" data-lucide="info" data-tip="Actual input + output tokens since 00:00 (calendar day) vs. the target. The percentage is NOT clamped to 100%." tabindex="0"></i></div>
-              <div class="rate-limit" data-limit="budget">
-                <div class="rate-limit__value"><span class="rate-limit__used" id="budgetUsed">0</span><span class="rate-limit__sep">/</span><span class="rate-limit__limit" id="budgetLimit">?</span></div>
-                <div class="rate-limit__label">tokens / day · <span id="budgetRemaining">unknown</span> remaining</div>
-                <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-                  <span class="progress__bar" id="budgetBar" style="width:0%"></span>
-                </div>
-                <div class="rate-limit__foot"><span class="status-badge" id="budgetBadge">OK</span><span class="rate-limit__pct" id="budgetPct">0%</span></div>
-                <div class="rate-limit__over" id="budgetOver" hidden></div>
-                <div class="budget-burn" id="budgetBurn" hidden></div>
-              </div>
-            </div>
-            <div class="card chart-card">
-              <div class="card__head"><h3>Projection</h3><i class="info-icon" data-lucide="info" data-tip="End-of-day extrapolation if the current burn rate continues. Burn rate = tokens since 00:00 / elapsed hours." tabindex="0"></i></div>
-              <div class="budget-projection" id="budgetProjection">—</div>
-              <div class="budget-projection__meta" id="budgetProjectionMeta"></div>
-              <div class="budget-timing" id="budgetTiming"></div>
-            </div>
+          <div class="quota-insight" id="quotaInsight" hidden>
+            <span class="quota-insight__status" id="insightStatus"><span class="q-status__dot" aria-hidden="true"></span><span id="insightStatusText">—</span></span>
+            <span class="quota-insight__row" id="insightSummary">—</span>
           </div>
 
           <div class="card chart-card" style="margin-top:1rem">
             <div class="card__head">
-              <h3>Daily usage vs. target</h3>
-              <span class="card__meta" id="budgetChartMeta">last 14 days</span>
+              <h3>Daily usage (calendar day)</h3>
+              <span class="card__meta" id="budgetChartMeta">last 14 days · calendar days, separate from the quota window</span>
             </div>
-            <div class="chart-wrap"><canvas id="budgetChart" height="240" aria-label="Daily token usage vs budget chart" role="img"></canvas></div>
+            <div class="chart-wrap"><canvas id="budgetChart" height="240" aria-label="Daily token usage by calendar day chart" role="img"></canvas></div>
           </div>
 
           <div class="card table-card" style="margin-top:1rem">
             <div class="card__head"><h3>Daily history</h3></div>
             <div class="table-scroll">
-              <table class="data-table" id="budgetTable" aria-describedby="Daily token usage against the budget">
+              <table class="data-table" id="budgetTable" aria-describedby="Daily token usage by calendar day">
                 <thead>
                   <tr>
                     <th>Date</th>
@@ -829,9 +919,6 @@
                     <th class="numeric">Input</th>
                     <th class="numeric">Output</th>
                     <th class="numeric">Tokens</th>
-                    <th class="numeric">Budget</th>
-                    <th class="numeric">Delta</th>
-                    <th>Status</th>
                   </tr>
                 </thead>
                 <tbody id="budgetBody"></tbody>

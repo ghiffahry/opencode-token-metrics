@@ -1,12 +1,11 @@
-"""Context-usage and daily-budget endpoints."""
+"""Context-usage and quota-window endpoints."""
 
 import datetime
-import os
 
-from .config import ANALYTICS_TZ, DAILY_BUDGET_DEFAULT, RANGES
+from .config import ANALYTICS_TZ, RANGES, quota_config
 from .db import context_for, load_context_map, message_model, msg_scope, q
 from .estimates import estimate_composition
-from .ranges import _ts_local, build_buckets, day_start_ms, now_ms, range_bounds, range_detail
+from .ranges import _ts_local, build_buckets, day_start_ms, now_ms, quota_window_bounds, range_bounds, range_detail
 
 def context_usage(range_key, project=None, model=None, from_date=None, to_date=None):
     """Per-request context-window observability from the actual stored tokens.
@@ -141,11 +140,49 @@ def context_usage(range_key, project=None, model=None, from_date=None, to_date=N
 
 
 def daily_budget(project=None, model=None):
-    """Today's usage vs a configured daily token budget + 14-day history."""
+    """Free-tier quota window usage + projection + 14-day calendar history.
+
+    The quota is an *estimated* 14h window (see quota_window_bounds), NOT a
+    calendar day. `today`/`history` remain calendar-day analytics, kept
+    strictly separate from the quota window. Percentages are raw - never
+    clamped to 100%.
+    """
     now = now_ms()
+    qc = quota_config()
     today = day_start_ms(now)
     hist_start = day_start_ms(now - 13 * 86_400_000)
     m_sql, m_par = msg_scope(project, model)
+
+    wb = quota_window_bounds(now, hours=qc["hours"], anchor_hour=qc["anchorHour"])
+    win_rows = q("SELECT time_created, "
+                 "json_extract(data, '$.tokens.input') AS tokens_input, "
+                 "json_extract(data, '$.tokens.output') AS tokens_output "
+                 "FROM message WHERE time_created >= ? AND time_created < ? "
+                 "AND json_extract(data, '$.role') = 'assistant' "
+                 "AND json_extract(data, '$.modelID') IS NOT NULL" + m_sql,
+                 (wb["start"], now) + m_par)
+    win_req = len(win_rows)
+    win_tokens = sum(int(r["tokens_input"] or 0) + int(r["tokens_output"] or 0)
+                     for r in win_rows)
+
+    series = []
+    if win_rows:
+        per_bucket = {}
+        for r in win_rows:
+            b = int((r["time_created"] - wb["start"]) // 3_600_000)
+            g = per_bucket.setdefault(b, [0, 0])
+            g[0] += int(r["tokens_input"] or 0) + int(r["tokens_output"] or 0)
+            g[1] += 1
+        last_bucket = int((now - wb["start"]) // 3_600_000)
+        for b in range(0, last_bucket + 1):
+            g = per_bucket.get(b, [0, 0])
+            bucket_ts = wb["start"] + b * 3_600_000
+            series.append({
+                "t": bucket_ts,
+                "label": _ts_local(bucket_ts).strftime("%H:00"),
+                "tokens": g[0],
+                "requests": g[1],
+            })
 
     today_rows = q("SELECT json_extract(data, '$.tokens.input') AS tokens_input, "
                    "json_extract(data, '$.tokens.output') AS tokens_output, "
@@ -155,7 +192,8 @@ def daily_budget(project=None, model=None):
                    "AND json_extract(data, '$.modelID') IS NOT NULL" + m_sql,
                    (today, now) + m_par)
     today_req = len(today_rows)
-    today_tokens = sum(int(r["tokens_input"] or 0) + int(r["tokens_output"] or 0) for r in today_rows)
+    today_tokens = sum(int(r["tokens_input"] or 0) + int(r["tokens_output"] or 0)
+                       for r in today_rows)
     today_cache = sum(int(r["tokens_cache_read"] or 0) for r in today_rows)
     today_input = sum(int(r["tokens_input"] or 0) for r in today_rows)
     today_output = today_tokens - today_input
@@ -184,18 +222,6 @@ def daily_budget(project=None, model=None):
             days[i][1]["input"] += int(r["tokens_input"] or 0)
             days[i][1]["output"] += int(r["tokens_output"] or 0)
 
-    raw = os.environ.get("TOKENMETRICS_DAILY_BUDGET")
-    if raw is not None:
-        try:
-            budget = int(raw)
-            source = "configured"
-        except ValueError:
-            budget = DAILY_BUDGET_DEFAULT
-            source = "default"
-    else:
-        budget = DAILY_BUDGET_DEFAULT
-        source = "default"
-
     history = []
     for day, g in days:
         tokens = g["input"] + g["output"]
@@ -206,23 +232,68 @@ def daily_budget(project=None, model=None):
             "input": g["input"],
             "output": g["output"],
             "tokens": tokens,
-            "budget": budget,
-            "over": tokens > budget,
-            "remaining": budget - tokens,
         })
 
-    elapsed_h = (now - today) / 3600_000
-    projected = round(today_tokens / (elapsed_h / 24.0)) if elapsed_h > 0 else today_tokens
+    # ---- Quota window derived metrics ----
+    limit = qc["limit"] or 0
+    elapsed_h = (now - wb["start"]) / 3600_000
+    hours_remaining = (wb["end"] - now) / 3600_000
+    burn_rate = None
+    if win_tokens > 0 and elapsed_h >= 1:
+        burn_rate = win_tokens / elapsed_h
+    projected = None
+    projected_pct = None
+    if burn_rate is not None and burn_rate > 0:
+        projected = win_tokens + burn_rate * hours_remaining
+        projected_pct = (projected / limit * 100) if limit else None
+    time_to_exhaustion = None
+    if limit > 0 and burn_rate and burn_rate > 0:
+        if win_tokens >= limit:
+            time_to_exhaustion = 0
+        else:
+            time_to_exhaustion = (limit - win_tokens) / burn_rate * 3600_000
+    will_exhaust = (time_to_exhaustion is not None and time_to_exhaustion >= 0
+                    and time_to_exhaustion < (wb["end"] - now))
+    if limit and win_tokens >= limit:
+        status = "exhausted"
+    elif will_exhaust:
+        status = "critical"
+    elif projected_pct is not None and projected_pct >= 70:
+        status = "watch"
+    else:
+        status = "healthy"
 
     return {
+        "window": {
+            "limit": limit,
+            "hours": qc["hours"],
+            "anchorHour": qc["anchorHour"],
+            "source": qc["limitSource"],
+            "estimated": True,
+            "start": wb["start"],
+            "end": wb["end"],
+            "resetAt": wb["resetAt"],
+            "used": win_tokens,
+            "remaining": limit - win_tokens,
+            "pct": (win_tokens / limit * 100) if limit else 0,
+            "requests": win_req,
+            "requestLimit": qc["requestLimit"] or 0,
+            "requestPct": (win_req / qc["requestLimit"] * 100) if qc["requestLimit"] else 0,
+            "elapsedHours": round(elapsed_h, 2),
+            "hoursRemaining": round(hours_remaining, 2),
+            "burnRate": round(burn_rate) if burn_rate is not None else None,
+            "projectedAtReset": round(projected) if projected is not None else None,
+            "projectedPct": round(projected_pct, 1) if projected_pct is not None else None,
+            "timeToExhaustionMs": round(time_to_exhaustion) if time_to_exhaustion is not None else None,
+            "willExhaustBeforeReset": bool(will_exhaust),
+            "status": status,
+            "series": series,
+        },
         "today": {"requests": today_req, "input": today_input, "output": today_output,
                   "cacheRead": today_cache, "tokens": today_tokens},
-        "config": {"target": budget, "source": source,
-                   "note": "configured via TOKENMETRICS_DAILY_BUDGET" if source == "configured"
-                           else "default estimate - set TOKENMETRICS_DAILY_BUDGET to pin a value"},
-        "projectedToday": projected,
-        "remaining": max(0, budget - today_tokens),
-        "pct": (today_tokens / budget * 100) if budget else 0,
+        "config": {"target": limit, "source": qc["limitSource"],
+                   "note": "configured via TOKENMETRICS_QUOTA_TOKENS" if qc["limitSource"] == "configured"
+                           else "estimated free-tier quota - set TOKENMETRICS_QUOTA_TOKENS to pin a value"},
         "history": history,
         "timezone": ANALYTICS_TZ,
         "generated": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
