@@ -52,6 +52,7 @@ export function liveTick() {
       state.lastSyncAt = Date.now();
       $("#lastUpdateValue").textContent = formatTime(new Date());
       $("#footerStamp").textContent = "Updated " + formatTime(new Date());
+      fillQuotaStrip();
       setLiveStatus(true);
 
       if (Date.now() - state.liveNextFull > 15000) {
@@ -124,7 +125,7 @@ function setDbBanner(info) {
   if (info && !info.dbExists) {
     var path = info.db || "";
     $("#dbBannerText").textContent =
-      "Database OpenCode tidak ditemukan: " + path + ". Usage tidak tersedia, bukan data fiktif. Jalankan OpenCode atau atur --db ke file SQLite yang benar.";
+      "OpenCode database not found: " + path + ". Usage is unavailable, no fake data. Run OpenCode or point --db at the correct SQLite file.";
     b.hidden = false;
   } else {
     b.hidden = true;
@@ -163,11 +164,17 @@ function renderQuotaInsight(view) {
   if (!quota || !daily) return;
   if (Number.isFinite(daily.limit)) {
     quota.textContent = formatTokens(daily.limit) + " / " + (daily.hours || 14) + "h";
-    if (daily.source === "configured") meta.textContent = "Configured quota (TOKENMETRICS_QUOTA_TOKENS)";
-    else meta.textContent = "Estimated 14h window · set TOKENMETRICS_QUOTA_TOKENS to pin";
+    if (daily.source === "configured") {
+      meta.textContent = "Configured via env";
+      meta.title = "Quota pinned by TOKENMETRICS_QUOTA_TOKENS";
+    } else {
+      meta.textContent = "Estimated 14h window · configurable via env";
+      meta.title = "Estimated 14h window · set TOKENMETRICS_QUOTA_TOKENS to pin";
+    }
   } else {
     quota.textContent = "Unknown";
-    meta.textContent = "Provider quota not exposed · set TOKENMETRICS_QUOTA_TOKENS to define";
+    meta.textContent = "Provider quota not exposed";
+    meta.title = "Provider quota not exposed · set TOKENMETRICS_QUOTA_TOKENS to define";
   }
 }
 
@@ -181,6 +188,27 @@ function fillContextStrip() {
     ctxVal.textContent = "up to " + formatTokens(max);
     ctxMeta.textContent = "Provider context window, per model";
   }
+}
+
+function fillQuotaStrip() {
+  var hitVal = $("#cacheHitValue");
+  if (hitVal) {
+    var reqs = (state.contextUsage && state.contextUsage.requests) || [];
+    var totalIn = 0, totalCached = 0, totalOut = 0;
+    reqs.forEach(function (r) {
+      totalIn += r.input || 0;
+      totalCached += r.cached || 0;
+      totalOut += r.output || 0;
+    });
+    var total = totalIn + totalCached + totalOut;
+    hitVal.textContent = total > 0 ? Math.round((totalCached / total) * 100) + "%" : "n/a";
+  }
+  var w = state.budget && state.budget.window;
+  if (!w) return;
+  var rq = $("#requestQuotaValue");
+  if (rq) rq.textContent = nf.format(w.requests || 0) + " / " + nf.format(w.requestLimit || 0);
+  var src = $("#quotaSourceStatusValue");
+  if (src) src.textContent = w.source === "configured" ? "Pinned" : "Estimated";
 }
 
 export function startLive() {
@@ -222,6 +250,7 @@ function bootLive() {
       renderLiveCounters();
       renderQuotaInsight(state.view);
       fillContextStrip();
+      fillQuotaStrip();
       return fetchPluginState();
     })
     .then(function (ps) {
@@ -234,7 +263,7 @@ function bootLive() {
       showToast(
         state.dbExists
           ? "Live: reading opencode database (" + apiBase() + ")"
-          : "DB OpenCode tidak tersedia; usage belum dapat dibaca",
+          : "OpenCode DB unavailable; usage cannot be read yet",
         state.dbExists ? "success" : "error"
       );
     })

@@ -69,7 +69,7 @@ function fmtRemain(ms) {
 function updateTimelineHint(resetAt) {
   var el = $("#quotaTimelineHint");
   if (!el) return;
-  el.textContent = resetAt ? fmtRemain(resetAt - Date.now()) + " lagi sampai reset" : "";
+  el.textContent = resetAt ? fmtRemain(resetAt - Date.now()) + " until reset" : "";
 }
 
 function renderCountdown(resetAt) {
@@ -252,7 +252,7 @@ export function renderBudget(snap) {
   renderBurnChart(w);
 
   /* ---- Card 3: Reset & Projection ---- */
-  $("#quotaResetNext").textContent = fmtClock(w.resetAt) + " WIB";
+  $("#quotaResetNext").textContent = fmtClock(w.resetAt);
   renderCountdown(w.resetAt);
   var proj = $("#budgetProjection");
   if (proj) {

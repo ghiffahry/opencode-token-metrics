@@ -263,7 +263,7 @@
               <div class="status-item__body">
                 <span class="status-item__label">Token quota</span>
                 <strong id="dailyQuotaValue">Unknown</strong>
-                <small id="dailyQuotaMeta">Estimated 14h window · set TOKENMETRICS_QUOTA_TOKENS to pin</small>
+                <small id="dailyQuotaMeta" title="Estimated 14h window · set TOKENMETRICS_QUOTA_TOKENS to pin">Estimated 14h window · configurable via env</small>
               </div>
             </div>
             <div class="status-item">
@@ -272,6 +272,30 @@
                 <span class="status-item__label">Context</span>
                 <strong id="contextValue">Model dependent</strong>
                 <small id="contextMeta">Context window shown per model</small>
+              </div>
+            </div>
+            <div class="status-item">
+              <i data-lucide="layers" class="status-item__icon"></i>
+              <div class="status-item__body">
+                <span class="status-item__label">Cache Hit Rate</span>
+                <strong id="cacheHitValue">n/a</strong>
+                <small id="cacheHitMeta">Cached vs total tokens</small>
+              </div>
+            </div>
+            <div class="status-item">
+              <i data-lucide="list-checks" class="status-item__icon"></i>
+              <div class="status-item__body">
+                <span class="status-item__label">Request Quota</span>
+                <strong id="requestQuotaValue">…</strong>
+                <small id="requestQuotaMeta" title="Requests / 14h window · estimated">Requests / 14h window · estimated</small>
+              </div>
+            </div>
+            <div class="status-item">
+              <i data-lucide="shield-check" class="status-item__icon"></i>
+              <div class="status-item__body">
+                <span class="status-item__label">Quota Source</span>
+                <strong id="quotaSourceStatusValue">…</strong>
+                <small id="quotaSourceStatusMeta" title="Estimated unless TOKENMETRICS_QUOTA_TOKENS is set">Estimated unless TOKENMETRICS_QUOTA_TOKENS is set</small>
               </div>
             </div>
             <div class="status-item">

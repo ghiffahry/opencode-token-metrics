@@ -110,9 +110,9 @@ def estimate_composition(directory, input_total, req=None):
     return {
         "segments": out,
         "estimated": True,
-        "note": ("Estimasi heuristik - opencode.db tidak merekam atribusi token per kategori. "
-                 "Total %d token input nyata dibagi: kategori statis diperkirakan dari file "
-                 "project (AGENTS.md/.rules/SKILL.md/opencode.json), sisanya conversation/"
+        "note": ("Heuristic estimate - opencode.db does not record token attribution per category. "
+                 "Total %d real input tokens split: static categories estimated from project files "
+                 "(AGENTS.md/.rules/SKILL.md/opencode.json), the remainder as conversation/"
                  "workspace/retrieved." % input_total),
     }
 
