@@ -45,6 +45,8 @@
   /* transitions */
   --transition-fast: 150ms ease;
   --transition-base: 220ms ease;
+  --transition-label: 100ms ease;
+  --transition-sidebar: 200ms ease;
 }
 
 :root[data-theme="light"] {
@@ -169,6 +171,10 @@
 *::before,
 *::after {
   box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
 }
 
 html {

@@ -76,11 +76,9 @@
 
   body.sidebar-collapsed .brand-text,
   body.sidebar-collapsed .nav-label,
-  body.sidebar-collapsed .status-card__body,
-  body.sidebar-collapsed .status-card__dot {
+  body.sidebar-collapsed .nav-group__toggle > span,
+  body.sidebar-collapsed .status-card__body {
     opacity: 1;
-    width: auto;
-    overflow: visible;
     pointer-events: auto;
   }
 
@@ -173,14 +171,7 @@
   }
 
   .status-strip {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .status-item + .status-item {
-    border-left: none;
-    padding-left: 0;
-    border-top: 1px solid var(--border);
-    padding-top: var(--space-3);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .filter-chips {

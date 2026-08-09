@@ -39,7 +39,8 @@
   flex-direction: column;
   background: var(--bg-sidebar);
   border-right: 1px solid var(--border);
-  transition: width var(--transition-base), transform var(--transition-base);
+  overflow: hidden;
+  transition: width var(--transition-sidebar), transform var(--transition-sidebar);
   z-index: 40;
 }
 
@@ -72,7 +73,23 @@
   flex-direction: column;
   min-width: 0;
   white-space: nowrap;
-  transition: opacity var(--transition-fast);
+}
+
+/* Sidebar text that is conditionally rendered when collapsed. The label
+   fade (fast) runs before the sidebar width change (slow) so text is never
+   clipped mid-word. Actual removal from layout is JS-driven (hidden attr). */
+.brand-text,
+.nav-label,
+.nav-group__toggle > span,
+.status-card__body {
+  transition: opacity var(--transition-label);
+}
+
+body.sidebar-fading .brand-text,
+body.sidebar-fading .nav-label,
+body.sidebar-fading .nav-group__toggle > span,
+body.sidebar-fading .status-card__body {
+  opacity: 0;
 }
 
 .brand-name {
@@ -181,8 +198,8 @@
 /* ---------- System status strip ---------- */
 .status-strip {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--space-4);
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px 24px;
   margin-top: var(--space-5);
   padding: var(--space-3) var(--space-4);
   border: 1px solid var(--border);
@@ -202,6 +219,16 @@
 .status-item + .status-item {
   border-left: 1px solid var(--border);
   padding-left: var(--space-4);
+}
+
+.status-item:nth-child(4n + 1) {
+  border-left: none;
+  padding-left: 0;
+}
+
+.status-item:nth-child(n + 5) {
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-3);
 }
 
 .status-item__icon {
@@ -298,6 +325,7 @@
 .sidebar__footer {
   padding: var(--space-3);
   border-top: 1px solid var(--border);
+  overflow: hidden;
 }
 
 .status-card {
@@ -371,19 +399,26 @@
   100% { box-shadow: 0 0 0 0 rgba(253, 214, 99, 0); }
 }
 
-/* collapsed state */
+/* collapsed state: labels are removed from the DOM by JS (hidden attr),
+   so only icons remain; sidebar width animates on --transition-sidebar. */
 body.sidebar-collapsed .sidebar {
   width: var(--sidebar-collapsed-width);
 }
 
-body.sidebar-collapsed .brand-text,
-body.sidebar-collapsed .nav-label,
-body.sidebar-collapsed .status-card__body,
-body.sidebar-collapsed .status-card__dot {
-  opacity: 0;
-  width: 0;
-  overflow: hidden;
-  pointer-events: none;
+body.sidebar-collapsed .sidebar__brand {
+  gap: 4px;
+  padding: var(--space-5) 0 var(--space-4);
+  justify-content: center;
+}
+
+body.sidebar-collapsed .brand-mark {
+  width: 32px;
+  height: 32px;
+}
+
+body.sidebar-collapsed .nav-group__toggle {
+  justify-content: center;
+  padding: 6px 0;
 }
 
 body.sidebar-collapsed .nav-item {
@@ -397,7 +432,12 @@ body.sidebar-collapsed .sidebar__collapse svg {
 
 body.sidebar-collapsed .status-card {
   justify-content: center;
+  gap: var(--space-2);
   padding: var(--space-3) 0;
+}
+
+body.sidebar-collapsed .status-card__dot {
+  margin-left: 0;
 }
 
 .sidebar-backdrop {

@@ -27,6 +27,105 @@ function applyTheme(theme) {
   refreshGraphTheme();
 }
 
+/* ---------------- Sidebar collapse ----------------
+   Labels are conditionally rendered (removed from layout) instead of being
+   clipped by the shrinking container. On collapse they fade out first
+   (--transition-label), then the sidebar width animates (--transition-sidebar).
+   On mobile the sidebar becomes a full drawer, so labels stay visible. */
+var SIDEBAR_FADE_MS = 100;
+var SIDEBAR_WIDTH_MS = 200;
+var sidebarToken = 0;
+
+function isDesktopNav() {
+  return window.innerWidth > 900;
+}
+
+function syncSidebarLabels(collapsed) {
+  var show = !collapsed || !isDesktopNav();
+  $all(".nav-item").forEach(function (a) {
+    var label = a.querySelector(".nav-label");
+    if (!label) return;
+    if (show) {
+      label.removeAttribute("hidden");
+      a.removeAttribute("title");
+    } else {
+      a.setAttribute("title", label.textContent.trim());
+      label.setAttribute("hidden", "");
+    }
+  });
+  $all(".nav-group__toggle").forEach(function (b) {
+    var span = b.querySelector("span");
+    if (!span) return;
+    if (show) {
+      span.removeAttribute("hidden");
+      b.removeAttribute("title");
+    } else {
+      b.setAttribute("title", span.textContent.trim());
+      span.setAttribute("hidden", "");
+    }
+  });
+  var brand = $(".brand-text");
+  var mark = $(".brand-mark");
+  if (brand) {
+    if (show) {
+      brand.removeAttribute("hidden");
+      if (mark) mark.removeAttribute("title");
+    } else {
+      brand.setAttribute("hidden", "");
+      if (mark) mark.setAttribute("title", "Token Metrics");
+    }
+  }
+  var card = $("#systemStatus");
+  var cardBody = $(".status-card__body");
+  if (cardBody) {
+    if (show) {
+      cardBody.removeAttribute("hidden");
+      if (card) card.removeAttribute("title");
+    } else {
+      cardBody.setAttribute("hidden", "");
+      if (card) {
+        var t = $("#statusTitle");
+        var m = $("#statusMeta");
+        card.setAttribute("title", (t ? t.textContent.trim() : "Status") + " · " + (m ? m.textContent.trim() : ""));
+      }
+    }
+  }
+}
+
+function setSidebarCollapsed(collapsed) {
+  var body = document.body;
+  if (collapsed === body.classList.contains("sidebar-collapsed")) return;
+  var token = ++sidebarToken;
+  if (!isDesktopNav()) {
+    body.classList.toggle("sidebar-collapsed", collapsed);
+    syncSidebarLabels(collapsed);
+    return;
+  }
+  if (collapsed) {
+    /* fade labels out first, then shrink the width */
+    body.classList.add("sidebar-fading");
+    setTimeout(function () {
+      if (token !== sidebarToken) return;
+      body.classList.remove("sidebar-fading");
+      body.classList.add("sidebar-collapsed");
+      syncSidebarLabels(true);
+    }, SIDEBAR_FADE_MS);
+  } else {
+    /* grow the width first (labels stay hidden), then fade labels in so
+       text is never clipped mid-word while the sidebar expands */
+    body.classList.remove("sidebar-collapsed");
+    body.classList.add("sidebar-fading");
+    void body.offsetWidth;
+    setTimeout(function () {
+      if (token !== sidebarToken) return;
+      syncSidebarLabels(false);
+      void body.offsetWidth;
+      body.classList.remove("sidebar-fading");
+    }, SIDEBAR_WIDTH_MS);
+  }
+}
+
+
 export function doRefresh() {
   var btn = $("#refreshBtn");
   btn.classList.add("is-loading");
@@ -46,8 +145,9 @@ export function initControls() {
   });
 
   $("#sidebarCollapse").addEventListener("click", function () {
-    document.body.classList.toggle("sidebar-collapsed");
-    try { localStorage.setItem("sidebarCollapsed", document.body.classList.contains("sidebar-collapsed") ? "1" : "0"); } catch (e) {}
+    var collapsed = !document.body.classList.contains("sidebar-collapsed");
+    setSidebarCollapsed(collapsed);
+    try { localStorage.setItem("sidebarCollapsed", collapsed ? "1" : "0"); } catch (e) {}
   });
 
   $("#menuToggle").addEventListener("click", function () {
@@ -321,6 +421,21 @@ export function initControls() {
     if (e.key === "theme" && e.newValue) {
       applyTheme(e.newValue);
     }
+  });
+
+  syncSidebarLabels(document.body.classList.contains("sidebar-collapsed"));
+
+  var resizeTimer = null;
+  window.addEventListener("resize", function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () {
+      var collapsed = document.body.classList.contains("sidebar-collapsed");
+      syncSidebarLabels(collapsed);
+      if (collapsed && !isDesktopNav()) {
+        document.body.classList.remove("sidebar-collapsed");
+        try { localStorage.setItem("sidebarCollapsed", "0"); } catch (e) {}
+      }
+    }, 150);
   });
 }
 
