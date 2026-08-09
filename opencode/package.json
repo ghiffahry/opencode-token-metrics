@@ -1,0 +1,26 @@
+{
+  "name": "opencode-token-metrics",
+  "version": "0.1.0",
+  "description": "Realtime token usage & quota monitor for opencode - captures usage from opencode events and writes a local state.json",
+  "type": "module",
+  "main": "plugins/token-metrics.js",
+  "files": [
+    "plugins"
+  ],
+  "license": "MIT",
+  "keywords": [
+    "opencode",
+    "plugin",
+    "tokens",
+    "usage",
+    "quota",
+    "monitor",
+    "token-metrics"
+  ],
+  "dependencies": {
+    "@opencode-ai/plugin": "^1.18.15"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
