@@ -88,8 +88,20 @@ def estimate_composition(directory, input_total, req=None):
 
     total = sum(cats.values())
     if total != input_total and total > 0:
-        key = max(cats, key=cats.get)
-        cats[key] = max(0, cats[key] + (input_total - total))
+        # Distribute the delta across the largest buckets first (they are the
+        # heuristic/static part), clamping at zero, until the sum is exact.
+        diff = input_total - total
+        for key in sorted(cats, key=cats.get, reverse=True):
+            if diff == 0:
+                break
+            value = cats[key]
+            if diff > 0:
+                cats[key] = value + diff
+                diff = 0
+            else:
+                take = min(value, -diff)
+                cats[key] = value - take
+                diff += take
 
     out = [{"category": k, "tokens": v,
             "pct": round(v / input_total * 100, 1) if input_total else 0,

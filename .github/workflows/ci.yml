@@ -21,6 +21,12 @@ jobs:
           python -m compileall -q server_app tools app server.py
           echo "python ok"
 
+      - name: Python unit tests (server_app)
+        run: |
+          python -m pip install pytest -q
+          python -m pytest tests -q
+          echo "tests ok"
+
       - name: Plugin syntax check
         uses: actions/setup-node@v4
         with:
