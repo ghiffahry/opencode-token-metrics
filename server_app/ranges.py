@@ -145,12 +145,12 @@ def range_detail(range_key, start, end):
     """Human label for the active period, e.g. '00:00-09:07 (+07:00)'."""
     off = tz_offset_str()
     if range_key == "today":
-        return "%s\u2013%s (%s)" % (
+        return "%s-%s (%s)" % (
             _ts_local(start).strftime("%H:%M"), _ts_local(end).strftime("%H:%M"), off)
     if range_key == "24h":
         return "%s \u2192 %s" % (
             _ts_local(start).strftime("%b %d %H:%M"), _ts_local(end).strftime("%b %d %H:%M"))
-    return "%s \u2013 %s" % (
+    return "%s-%s" % (
         _ts_local(start).strftime("%b %d"), _ts_local(end).strftime("%b %d %Y"))
 
 

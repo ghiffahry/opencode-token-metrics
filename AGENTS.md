@@ -1,4 +1,4 @@
-# AGENTS.md — Token Metrics
+# AGENTS.md · Token Metrics
 
 Local dashboard + opencode plugin for monitoring opencode API token usage.
 
@@ -22,7 +22,7 @@ py tools/git_commit.py    # stage + commit helper (conventional commits)
 - Backend lives in the `server_app/` package (config, db, ranges, estimates,
   overview, context, routes, httpd); `server.py` is a thin shim.
 - Frontend is ES modules under `static/js/` (core/, data/, render/, live/,
-  app/); no bundler, no framework — keep vanilla JS and match existing style.
+  app/); no bundler, no framework; keep vanilla JS and match existing style.
 - Data is read from the real `opencode.db` in read-only/WAL-safe mode; never
   write to it. UI strings may be localized, but code/comments stay English.
 

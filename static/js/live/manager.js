@@ -120,7 +120,7 @@ function setDbBanner(info) {
   if (info && !info.dbExists) {
     var path = info.db || "";
     $("#dbBannerText").textContent =
-      "Database OpenCode tidak ditemukan: " + path + " — usage tidak tersedia, bukan data fiktif. Jalankan OpenCode atau atur --db ke file SQLite yang benar.";
+      "Database OpenCode tidak ditemukan: " + path + ". Usage tidak tersedia, bukan data fiktif. Jalankan OpenCode atau atur --db ke file SQLite yang benar.";
     b.hidden = false;
   } else {
     b.hidden = true;
@@ -207,7 +207,7 @@ function bootLive() {
       showToast(
         state.dbExists
           ? "Live: reading opencode database (" + apiBase() + ")"
-          : "DB OpenCode tidak tersedia — usage belum dapat dibaca",
+          : "DB OpenCode tidak tersedia; usage belum dapat dibaca",
         state.dbExists ? "success" : "error"
       );
     })
@@ -222,7 +222,7 @@ function bootLive() {
       var now = Date.now();
       if (now - lastToastAt > 20000) {
         lastToastAt = now;
-        showToast("Live server unreachable (" + apiBase() + ") — retrying…", "error");
+        showToast("Live server unreachable (" + apiBase() + "), retrying…", "error");
       }
       scheduleBoot(2000);
     });

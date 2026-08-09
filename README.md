@@ -1,6 +1,6 @@
 # Token Metrics - OpenCode API Usage Dashboard
 
-Desktop dashboard for **opencode** API token usage, rate limits, model context, and session activity. All data is read live from your real `opencode.db` — no mock data, no exposed server.
+Desktop dashboard for **opencode** API token usage, rate limits, model context, and session activity. All data is read live from your real `opencode.db`; no mock data, no exposed server.
 
 - **Desktop app (main path)** - `py app/desktop.py` opens a native window (Edge WebView2 via `pywebview`) backed by an embedded loopback server on a random `127.0.0.1` port. Only the window can reach it; no browser tab, no fixed port.
 - **Dev server** - `py server.py` serves the same dashboard + API at `http://127.0.0.1:8124/` for development.
@@ -179,7 +179,7 @@ Base URL: `http://127.0.0.1:8124` (dev server; the desktop app uses a random por
 
 **Context usage:** `tokens.total == input + output + reasoning + cache.read` in the database, but no per-category attribution is stored, so the composition breakdown is an explicit **estimated** heuristic (splits only the real input total of the latest request across categories read from the workspace files; it never invents tokens). Everything else (window utilisation, peaks, aggregates) is actuals from the database.
 
-**Token quota (Free-Tier Quota):** the opencode free tier grants roughly 2.5M tokens per ~14 h reset window; the dashboard models it as an estimated sliding window anchored at `QUOTA_ANCHOR_HOUR` (default 04:00 local, so the shift never happens at your off-midnight usage of the window — the anchor choice only changes where the reset lands). `TOKENMETRICS_QUOTA_TOKENS` (tokens per window) and `TOKENMETRICS_QUOTA_WINDOW_HOURS` pin the values (labelled `configured`); unset, defaults `2_500_000` / `14` are used and labelled `default`. The window is **estimated** — the reset is never claimed to be exact provider timing. Percentages are raw (not clamped to 100%). Status tiers (HEALTHY / WATCH / HIGH / CRITICAL / EXHAUSTION RISK) are dashboard interpretation thresholds on projected usage at reset, not provider rules. Calendar-day usage stays separate (`today` / `history`).
+**Token quota (Free-Tier Quota):** the opencode free tier grants roughly 2.5M tokens per ~14 h reset window; the dashboard models it as an estimated sliding window anchored at `QUOTA_ANCHOR_HOUR` (default 04:00 local, so the shift never happens at your off-midnight usage of the window; the anchor choice only changes where the reset lands). `TOKENMETRICS_QUOTA_TOKENS` (tokens per window) and `TOKENMETRICS_QUOTA_WINDOW_HOURS` pin the values (labelled `configured`); unset, defaults `2_500_000` / `14` are used and labelled `default`. The window is **estimated**: the reset is never claimed to be exact provider timing. Percentages are raw (not clamped to 100%). Status tiers (HEALTHY / WATCH / HIGH / CRITICAL / EXHAUSTION RISK) are dashboard interpretation thresholds on projected usage at reset, not provider rules. Calendar-day usage stays separate (`today` / `history`).
 
 Responses are JSON, cached briefly server-side (overview 3 s, models 5 s, sessions/requests 2 s, realtime 1.5 s).
 

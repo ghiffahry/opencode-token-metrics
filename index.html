@@ -179,7 +179,7 @@
                 <i data-lucide="image"></i><span><strong>PNG snapshot</strong><small>All chart canvases in one image</small></span>
               </button>
               <div class="export-menu__foot">
-                <span>Period: <strong id="exportPeriod">—</strong></span>
+                <span>Period: <strong id="exportPeriod">…</strong></span>
                 <span>Filters: <strong id="exportFilters">all models · all agents</strong></span>
               </div>
             </div>
@@ -278,7 +278,7 @@
               <i data-lucide="refresh-cw" class="status-item__icon"></i>
               <div class="status-item__body">
                 <span class="status-item__label">Last sync</span>
-                <strong id="lastUpdateValue">—</strong>
+                <strong id="lastUpdateValue">…</strong>
                 <small id="lastUpdateMeta">Live polling every few seconds</small>
               </div>
             </div>
@@ -379,7 +379,7 @@
               <div class="consumption" id="effConsumption"></div>
             </div>
             <div class="card chart-card">
-              <div class="card__head"><h3>Efficiency</h3><i class="info-icon" data-lucide="info" data-tip="Output/Input ratio: for every 1,000 input tokens, ratio x 1,000 output tokens were generated. A low ratio is not automatically bad — it depends on the task." tabindex="0"></i></div>
+              <div class="card__head"><h3>Efficiency</h3><i class="info-icon" data-lucide="info" data-tip="Output/Input ratio: for every 1,000 input tokens, ratio x 1,000 output tokens were generated. A low ratio is not automatically bad; it depends on the task." tabindex="0"></i></div>
               <div class="efficiency-list" id="effEfficiency"></div>
             </div>
             <div class="card chart-card">
@@ -712,7 +712,7 @@
           </header>
           <div class="grid grid--3">
             <div class="card chart-card" id="rpmCard">
-              <div class="card__head"><h3>Requests per minute</h3><i class="info-icon" data-lucide="info" data-tip="RPM — requests completed during the rolling 60-second window vs. the configured quota." tabindex="0"></i></div>
+              <div class="card__head"><h3>Requests per minute</h3><i class="info-icon" data-lucide="info" data-tip="RPM: requests completed during the rolling 60-second window vs. the configured quota." tabindex="0"></i></div>
               <div class="rate-limit" data-limit="rpm">
                 <div class="rate-limit__value"><span class="rate-limit__used" id="rpmUsed">0</span><span class="rate-limit__sep">/</span><span class="rate-limit__limit" id="rpmLimit">60</span></div>
                 <div class="rate-limit__label">req / min · rolling 60s</div>
@@ -724,7 +724,7 @@
               </div>
             </div>
             <div class="card chart-card" id="tpmCard">
-              <div class="card__head"><h3>Tokens per minute</h3><i class="info-icon" data-lucide="info" data-tip="TPM — input + output tokens processed during the rolling 60-second window vs. the configured quota." tabindex="0"></i></div>
+              <div class="card__head"><h3>Tokens per minute</h3><i class="info-icon" data-lucide="info" data-tip="TPM: input + output tokens processed during the rolling 60-second window vs. the configured quota." tabindex="0"></i></div>
               <div class="rate-limit" data-limit="tpm">
                 <div class="rate-limit__value"><span class="rate-limit__used" id="tpmUsed">0</span><span class="rate-limit__sep">/</span><span class="rate-limit__limit" id="tpmLimit">250,000</span></div>
                 <div class="rate-limit__label">tokens / min · rolling 60s</div>
@@ -736,7 +736,7 @@
               </div>
             </div>
             <div class="card chart-card" id="rpdCard">
-              <div class="card__head"><h3>Requests — quota window</h3><i class="info-icon" data-lucide="info" data-tip="Requests completed inside the estimated 14h quota window (NOT a calendar day). The limit is an estimate (default 200) — set TOKENMETRICS_REQUEST_QUOTA to pin a verified value." tabindex="0"></i></div>
+              <div class="card__head"><h3>Requests · quota window</h3><i class="info-icon" data-lucide="info" data-tip="Requests completed inside the estimated 14h quota window (NOT a calendar day). The limit is an estimate (default 200). Set TOKENMETRICS_REQUEST_QUOTA to pin a verified value." tabindex="0"></i></div>
               <div class="rate-limit" data-limit="rpd">
                 <div class="rate-limit__value"><span class="rate-limit__used" id="rpdUsed">0</span><span class="rate-limit__sep">/</span><span class="rate-limit__limit" id="rpdLimit">200</span></div>
                 <div class="rate-limit__label" id="rpdLabel">requests / 14h window · estimated</div>
@@ -774,7 +774,7 @@
                   </div>
                   <div class="quota-secondary__cell">
                     <span class="q-label">Remaining</span>
-                    <strong class="q-value" id="quotaRemaining">—</strong>
+                    <strong class="q-value" id="quotaRemaining">…</strong>
                   </div>
                 </div>
                 <div class="quota-utilization">
@@ -797,7 +797,7 @@
               <div class="qcard__body">
                 <div class="q-usage">
                   <div class="q-usage__value metric-lg">
-                    <strong class="q-usage__used" id="budgetUsed">0</strong><span class="q-usage__sep">/</span><span class="q-usage__limit" id="budgetLimit">—</span>
+                    <strong class="q-usage__used" id="budgetUsed">0</strong><span class="q-usage__sep">/</span><span class="q-usage__limit" id="budgetLimit">…</span>
                   </div>
                   <div class="q-usage__pct" id="budgetPct">0% used</div>
                   <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
@@ -808,7 +808,7 @@
                 <div class="q-grid">
                   <div class="q-grid__cell">
                     <span class="q-label">Burn rate</span>
-                    <strong class="q-value" id="quotaBurn">—</strong>
+                    <strong class="q-value" id="quotaBurn">…</strong>
                   </div>
                   <div class="q-grid__cell">
                     <span class="q-label">Requests</span>
@@ -823,7 +823,7 @@
                 <div class="q-burn">
                   <div class="q-burn__head">
                     <span class="q-label">Token burn rate</span>
-                    <strong class="q-burn__rate" id="quotaBurnRate">—</strong>
+                    <strong class="q-burn__rate" id="quotaBurnRate">…</strong>
                   </div>
                   <div class="q-burn__chart"><canvas id="burnChart" height="88" aria-label="Token consumption per hour within the current quota window chart" role="img"></canvas></div>
                   <div class="q-burn__empty" id="burnEmpty" hidden>Not enough data in this window</div>
@@ -836,14 +836,14 @@
               <div class="qcard__body">
                 <div class="q-reset">
                   <span class="q-label">Quota reset</span>
-                  <div class="q-reset__count metric-lg" id="quotaResetCount">—</div>
-                  <div class="q-reset__next">Estimated next reset · <strong id="quotaResetNext">—</strong></div>
+                  <div class="q-reset__count metric-lg" id="quotaResetCount">…</div>
+                  <div class="q-reset__next">Estimated next reset · <strong id="quotaResetNext">…</strong></div>
                 </div>
                 <div class="q-divider"></div>
                 <div class="q-proj">
                   <span class="q-label">Projected at reset</span>
-                  <div class="q-proj__value metric-lg" id="budgetProjection">—</div>
-                  <div class="q-proj__pct" id="budgetProjectionMeta">—</div>
+                  <div class="q-proj__value metric-lg" id="budgetProjection">…</div>
+                  <div class="q-proj__pct" id="budgetProjectionMeta">…</div>
                   <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
                     <span class="progress__bar" id="projBar" style="width:0%"></span>
                   </div>
@@ -851,16 +851,16 @@
                 <div class="q-cmp">
                   <div class="q-cmp__cell">
                     <span class="q-label">Current</span>
-                    <strong class="q-value" id="cmpCurrent">—</strong>
+                    <strong class="q-value" id="cmpCurrent">…</strong>
                   </div>
                   <div class="q-cmp__arrow" aria-hidden="true"></div>
                   <div class="q-cmp__cell">
                     <span class="q-label">Projected</span>
-                    <strong class="q-value" id="cmpProjected">—</strong>
+                    <strong class="q-value" id="cmpProjected">…</strong>
                   </div>
                   <div class="q-cmp__growth">
                     <span class="q-label">Growth</span>
-                    <strong class="q-value" id="cmpGrowth">—</strong>
+                    <strong class="q-value" id="cmpGrowth">…</strong>
                   </div>
                 </div>
                 <div class="q-divider"></div>
@@ -878,15 +878,15 @@
             </div>
             <div class="quota-timeline__row" id="quotaTimelineRow">
               <span class="quota-timeline__item">
-                <span class="quota-timeline__time" id="quotaTimelineStart">—</span>
+                <span class="quota-timeline__time" id="quotaTimelineStart">…</span>
                 <span class="quota-timeline__itemlabel">Reset</span>
               </span>
               <span class="quota-timeline__item quota-timeline__item--now" id="quotaTimelineNowCell">
-                <span class="quota-timeline__time" id="quotaTimelineNowTime">—</span>
+                <span class="quota-timeline__time" id="quotaTimelineNowTime">…</span>
                 <span class="quota-timeline__itemlabel">Now</span>
               </span>
               <span class="quota-timeline__item">
-                <span class="quota-timeline__time" id="quotaTimelineEnd">—</span>
+                <span class="quota-timeline__time" id="quotaTimelineEnd">…</span>
                 <span class="quota-timeline__itemlabel">Next reset</span>
               </span>
             </div>
@@ -898,8 +898,8 @@
           </div>
 
           <div class="quota-insight" id="quotaInsight" hidden>
-            <span class="quota-insight__status" id="insightStatus"><span class="q-status__dot" aria-hidden="true"></span><span id="insightStatusText">—</span></span>
-            <span class="quota-insight__row" id="insightSummary">—</span>
+            <span class="quota-insight__status" id="insightStatus"><span class="q-status__dot" aria-hidden="true"></span><span id="insightStatusText">…</span></span>
+            <span class="quota-insight__row" id="insightSummary">…</span>
           </div>
 
           <div class="card chart-card" style="margin-top:1rem">

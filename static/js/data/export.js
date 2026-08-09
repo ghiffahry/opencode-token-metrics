@@ -68,7 +68,7 @@ export function exportPNG() {
   ctx.fillStyle = "#e8eaed";
   ctx.font = "600 20px Inter, sans-serif";
   ctx.textBaseline = "middle";
-  ctx.fillText("Token Metrics — " + rangeTitle(state.project, state.view), pad, headerH / 2);
+  ctx.fillText("Token Metrics · " + rangeTitle(state.project, state.view), pad, headerH / 2);
 
   var y = headerH;
   canvases.forEach(function (c) {
@@ -83,10 +83,10 @@ export function exportPNG() {
 
 export function exportSummary() {
   return {
-    period: state.view ? state.view.rangeLabel : "—",
+    period: state.view ? state.view.rangeLabel : "…",
     filters: (state.modelFilter === "all" ? "all models" : state.modelFilter.split("/").pop()) +
       " · " + (state.agentFilter === "all" ? "all agents" : state.agentFilter),
-    tokens: state.view ? formatTokens(state.view.total) : "—",
-    requests: state.view ? String(state.view.requests) : "—"
+    tokens: state.view ? formatTokens(state.view.total) : "…",
+    requests: state.view ? String(state.view.requests) : "…"
   };
 }

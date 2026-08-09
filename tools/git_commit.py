@@ -30,7 +30,7 @@ def main():
     status = subprocess.run(["git", "status", "--short"], capture_output=True, text=True)
     changed = [l for l in status.stdout.splitlines() if l.strip()]
     if not changed:
-        print("No changes to commit — working tree clean.")
+        print("No changes to commit; working tree clean.")
         return
 
     print("Changes:")

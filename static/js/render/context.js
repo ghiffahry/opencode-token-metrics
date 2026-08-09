@@ -415,7 +415,7 @@ function renderBreakdown(snap) {
     var total = r.input + r.cached + r.output;
     var cachePct = total > 0 ? (r.cached / total) * 100 : null;
     var avgCtx = view === "requests" ? total : r.requests > 0 ? total / r.requests : 0;
-    var lastUsed = r.lastSeen ? formatRelative(r.lastSeen) : "–";
+    var lastUsed = r.lastSeen ? formatRelative(r.lastSeen) : "n/a";
     return (
       "<tr data-ctx-row" + sessionRow + keyRow + (clickable ? ' class="ctx-row"' : "") + ">" +
       "<td><span class=\"cell-primary\">" + esc(r.name) + "</span>" +
@@ -424,10 +424,10 @@ function renderBreakdown(snap) {
       '<td class="numeric">' + formatTokens(r.input) + "</td>" +
       '<td class="numeric">' + formatTokens(r.cached) + "</td>" +
       '<td class="numeric">' + formatTokens(r.output) + "</td>" +
-      '<td class="numeric">' + (cachePct === null ? "–" : cachePct.toFixed(1) + "%") + "</td>" +
+      '<td class="numeric">' + (cachePct === null ? "n/a" : cachePct.toFixed(1) + "%") + "</td>" +
       '<td class="numeric">' + formatTokens(r.peak) + "</td>" +
       '<td class="numeric">' + windowCellHtml + "</td>" +
-      '<td class="numeric">' + (view === "requests" ? "–" : formatTokens(Math.round(avgCtx))) + "</td>" +
+      '<td class="numeric">' + (view === "requests" ? "n/a" : formatTokens(Math.round(avgCtx))) + "</td>" +
       '<td class="numeric cell-secondary">' + lastUsed + "</td>" +
       "</tr>"
     );

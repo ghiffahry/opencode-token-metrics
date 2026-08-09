@@ -13,7 +13,7 @@ function deltaInfo(cur, prev, invert) {
 }
 
 /* Tokens & requests deltas are directionally meaningful but not inherently
-   good/bad — render them neutral instead of green/red. */
+   good/bad. Render them neutral instead of green/red. */
 function deltaNeutral(cur, prev) {
   if (!prev) return { pct: 0, dir: "flat", good: null };
   var pct = ((cur - prev) / prev) * 100;
