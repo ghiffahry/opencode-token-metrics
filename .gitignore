@@ -20,6 +20,9 @@ graphify-out/
 # Test artifacts
 .playwright-mcp/
 
+# Node
+node_modules/
+
 # Editor / OS
 .vscode/
 .idea/
