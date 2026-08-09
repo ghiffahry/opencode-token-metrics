@@ -1,0 +1,26 @@
+# Normalize line endings: store LF in the repo, check out per platform.
+* text=auto
+
+# Source files: always LF in the working tree (keeps diffs and hooks stable
+# across Windows / macOS / Linux).
+*.py text eol=lf
+*.js text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+*.bat text eol=crlf
+*.spec text eol=lf
+
+# Binary formats.
+*.ico binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.svg text eol=lf
+*.woff binary
+*.woff2 binary
