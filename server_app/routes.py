@@ -13,6 +13,7 @@ from .context import context_usage, daily_budget
 from .db import load_context_map, q
 from .overview import (_empty_payload, models, overview, realtime, requests_list,
                        sessions)
+from .plugin_state import plugin_state
 from .ranges import tz_offset_str
 
 def api_context():
@@ -215,6 +216,9 @@ def handle_api(path, query):
     if path == "/api/realtime":
         return cache_get_or("realtime:%s:%s" % (project, model), 1.5,
                             lambda: realtime(project, model))
+
+    if path == "/api/plugin_state":
+        return plugin_state()
 
     return None
 

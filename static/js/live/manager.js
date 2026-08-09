@@ -6,7 +6,7 @@ import { renderSessionTable, renderPerDay, renderRateLimits } from "../render/ta
 import { renderLiveCounters, flashLiveCounters } from "../render/realtime.js";
 import {
   apiBase, liveUrl, httpJson, checkHealth, loadLiveRange, refreshLiveRange,
-  snapshotSessions, computeSessionDeltas, fetchRealtime
+  snapshotSessions, computeSessionDeltas, fetchRealtime, fetchPluginState
 } from "./api.js";
 import { renderGraph } from "../render/graph.js";
 
@@ -36,6 +36,10 @@ export function liveTick() {
       renderSessionTable();
       renderLiveCounters();
       flashLiveCounters();
+
+      fetchPluginState()
+        .then(function (ps) { state.pluginState = ps; renderPluginState(); })
+        .catch(function () {});
 
       var rl = state.view && state.view.rateLimits;
       if (rl) {
@@ -127,6 +131,24 @@ function setDbBanner(info) {
   }
 }
 
+function renderPluginState() {
+  var item = $("#pluginStateItem");
+  var value = $("#pluginStateValue");
+  var meta = $("#pluginStateMeta");
+  if (!item || !state.pluginState) return;
+  var ps = state.pluginState;
+  if (!ps || !ps.exists) {
+    item.hidden = true;
+    return;
+  }
+  item.hidden = false;
+  var w = ps.window || {};
+  var pct = w.pct != null ? w.pct.toFixed(0) + "%" : "n/a";
+  value.textContent = formatTokens(w.tokens || 0) + " / " + formatTokens(w.limit || 0) + " (" + pct + ")";
+  var when = ps.generated ? "Saved " + formatTime(new Date(ps.generated)) : "";
+  meta.textContent = (w.status ? w.status + " · " : "") + (when || "live plugin state");
+}
+
 function renderDataInsight(info) {
   var source = $("#dataSourceValue");
   var meta = $("#dataSourceMeta");
@@ -200,6 +222,11 @@ function bootLive() {
       renderLiveCounters();
       renderQuotaInsight(state.view);
       fillContextStrip();
+      return fetchPluginState();
+    })
+    .then(function (ps) {
+      state.pluginState = ps;
+      renderPluginState();
       state.lastSyncAt = Date.now();
       $("#lastUpdateValue").textContent = formatTime(new Date());
       ensureGraphLoaded();

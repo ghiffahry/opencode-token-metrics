@@ -65,9 +65,9 @@ npm install opencode-token-metrics
 }
 ```
 
-The dashboard can read this file for live plugin data (planned post-v0.1.0);
-today the dashboard reads `opencode.db` directly, so the plugin is an
-independent realtime complement.
+The dashboard reads this file for live plugin data via `GET /api/plugin_state`
+(see the Status strip "Plugin (state.json)" item), complementing the
+dashboard's direct reads of `opencode.db`.
 
 ## Configuration (env vars)
 

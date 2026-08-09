@@ -325,3 +325,7 @@ export function computeSessionDeltas(list) {
 export function fetchRealtime() {
   return httpJson(apiUrl("/api/realtime"), 6000);
 }
+
+export function fetchPluginState() {
+  return httpJson(liveUrl("/api/plugin_state"), 6000);
+}

@@ -35,6 +35,11 @@ dashboard-token/
 ├── tools/                   # Helper scripts (see table below)
 ├── runtime/                 # Generated logs, exports, build, and dist artifacts
 ├── graphify-out/            # Knowledge graph (graph.json + views), updated by graphify
+├── opencode/                # opencode plugin package (opencode-token-metrics)
+│   ├── plugins/token-metrics.js   #   Realtime usage + quota monitor (see Plugin section)
+│   ├── package.json               #   npm package metadata (publishable)
+│   └── README.md                  #   Plugin docs (install, env vars, tool)
+├── opencode.json            # Local opencode config: enables ./opencode/plugins/token-metrics.js
 └── README.md                # This guide
 ```
 
@@ -171,6 +176,7 @@ Base URL: `http://127.0.0.1:8124` (dev server; the desktop app uses a random por
 | `GET /api/sessions?limit=50` | Session list (id, title, model, tokens, status, latency) |
 | `GET /api/requests?limit=60` | Latest requests (id, model, agent, tokens, latency, status, time) |
 | `GET /api/realtime` | Watermark + active sessions, RPM/TPM (last 1 min), quota-window requests/tokens |
+| `GET /api/plugin_state` | Live state captured by the `opencode-token-metrics` plugin (`state.json`), if present: quota-window summary, session/message counts, status (`exists: false` when the plugin has not written yet) |
 | `GET /api/graph` | Knowledge graph from `graphify-out/graph.json` (see Knowledge Graph section below) |
 
 `range` values: `today`, `7d`, `30d`, `90d` (calendar ranges, default `today`), `24h` (rolling window: now − 24 h), and `custom` (requires `from=YYYY-MM-DD&to=YYYY-MM-DD`, both inclusive; dates are clamped to today). Calendar boundaries use `TOKENMETRICS_TZ` (default: system local timezone; set it to pin an IANA zone such as `Asia/Jakarta`); the database itself stays UTC epoch ms.
@@ -223,6 +229,16 @@ The dashboard sidebar has a **Knowledge Graph** section that visualizes the code
 | `RANGES` | `today/7d/30d/90d` (+ `24h`, `custom`) | Aggregation windows and bucket counts |
 
 KPI deltas and the efficiency baseline are computed from the immediately-prior window of the same length (`_prev_overview`), never from hardcoded constants.
+
+---
+
+## Plugin (opencode-token-metrics)
+
+`opencode/` is a small opencode plugin that captures live token usage from opencode events (as they happen, alongside the dashboard's DB polling) and writes a `state.json` (default `~/.local/share/token-metrics/state.json`). It exposes a `token_metrics` tool that returns the current window status, per-session breakdown, and the state file path. Details, install steps and env vars: see `opencode/README.md`.
+
+The repo's `opencode.json` already registers `./opencode/plugins/token-metrics.js`, so if you run opencode inside this repo the plugin is active automatically (restart opencode after changing it). To use the plugin in another project: `npm i opencode-token-metrics` (if published) and add it to that project's `plugin` list, or pass the local path.
+
+The dashboard reads the plugin's `state.json` via `GET /api/plugin_state` and shows a "Plugin (state.json)" item in the status strip; the item stays hidden until the plugin has written a state file.
 
 ---
 

@@ -49,6 +49,7 @@ from .db import (
 from .estimates import estimate_composition
 from .httpd import Handler, main, make_server
 from .overview import _empty_overview, _empty_payload, models, overview, realtime, requests_list, sessions
+from .plugin_state import plugin_state, state_path
 from .ranges import (
     build_buckets,
     day_start_ms,
@@ -74,8 +75,8 @@ __all__ = [
     "estimate_composition", "load_context_map", "log", "main", "make_server",
     "message_model", "model_providers", "models", "msg_duration_seconds",
     "msg_scope", "now_ms", "overview", "parse_custom_day", "parse_model",
-    "part_scope", "prev_bounds", "q", "quota_config", "quota_window_bounds",
+    "part_scope", "plugin_state", "prev_bounds", "q", "quota_config", "quota_window_bounds",
     "range_bounds", "range_detail",
     "realtime", "requests_list", "session_scope", "sessions", "set_db_path",
-    "tz_offset_str", "tzinfo",
+    "state_path", "tz_offset_str", "tzinfo",
 ]
