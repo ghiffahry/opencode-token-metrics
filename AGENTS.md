@@ -1,12 +1,34 @@
-## graphify
+# AGENTS.md — Token Metrics
 
-This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+Local dashboard + opencode plugin for monitoring opencode API token usage.
 
-When the user types `/graphify`, use the installed graphify skill or instructions before doing anything else.
+## Commands
 
-Rules:
-- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
-- Dirty graphify-out/ files are expected after hooks or incremental updates; dirty graph files are not a reason to skip graphify. Only skip graphify if the task is about stale or incorrect graph output, or the user explicitly says not to use it.
-- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
-- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
-- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+```bash
+py server.py              # dev server + API at http://127.0.0.1:8124/
+py app/desktop.py         # desktop app (pywebview, random loopback port)
+py tools/start.py         # start server detached
+py tools/stop.py          # stop the running server
+py tools/db_stats.py      # opencode DB overview
+py tools/git_commit.py    # stage + commit helper (conventional commits)
+```
+
+## Conventions
+
+- **Conventional commits**: `feat:`, `fix:`, `perf:`, `chore:`, `docs:`, `refactor:`, `build:`.
+- **Pre-commit hook** (tracked at `tools/git-hooks/pre-commit`) runs a Python
+  `py_compile` syntax check. Install once with
+  `git config core.hooksPath tools/git-hooks`.
+- Backend lives in the `server_app/` package (config, db, ranges, estimates,
+  overview, context, routes, httpd); `server.py` is a thin shim.
+- Frontend is ES modules under `static/js/` (core/, data/, render/, live/,
+  app/); no bundler, no framework — keep vanilla JS and match existing style.
+- Data is read from the real `opencode.db` in read-only/WAL-safe mode; never
+  write to it. UI strings may be localized, but code/comments stay English.
+
+## Plugin
+
+The opencode plugin lives in `opencode/` (npm package `opencode-token-metrics`).
+It captures live token usage from opencode events and writes `state.json` under
+`TOKENMETRICS_STATE` (default `~/.local/share/token-metrics/`). Keep it
+dependency-light and synchronous-friendly.
