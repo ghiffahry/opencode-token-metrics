@@ -8,7 +8,7 @@ import time
 from .cache import _cache, cache_get_or
 from .config import (ACTIVE_WINDOW_MS, ANALYTICS_TZ, BASE_DIR,
                      DEFAULT_CONTEXT, GRAPH_JSON, GRAPH_VIEWS, MODELS_CACHE,
-                     RANGES, RATE_LIMITS, RATE_LIMIT_SOURCES, db_path)
+                     RANGES, RATE_LIMITS, RATE_LIMIT_SOURCES, VERSION, db_path)
 from .context import context_usage, daily_budget
 from .db import load_context_map, q
 from .overview import (_empty_payload, models, overview, realtime, requests_list,
@@ -23,6 +23,7 @@ def api_context():
 def api_meta():
     return {
         "source": "opencode",
+        "version": VERSION,
         "db": str(db_path()),
         "modelsCache": str(MODELS_CACHE) if MODELS_CACHE.exists() else None,
         "ranges": {k: {"label": v["label"]} for k, v in RANGES.items()},

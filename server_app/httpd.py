@@ -6,11 +6,11 @@ import mimetypes
 import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from .config import (BASE_DIR, HOST, PORT, STATIC_TYPES, db_path, log, set_db_path)
+from .config import (BASE_DIR, HOST, PORT, STATIC_TYPES, VERSION, db_path, log, set_db_path)
 from .routes import handle_api
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "TokenMetrics/1.0"
+    server_version = "TokenMetrics/%s" % VERSION
 
     def _send(self, code, body, ctype):
         self.send_response(code)

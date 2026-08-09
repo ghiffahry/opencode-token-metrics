@@ -9,17 +9,24 @@ from pathlib import Path
 
 HOST = "127.0.0.1"
 PORT = 8124
+VERSION = "0.1.0"
 
 
 def _base_dir():
-    """Project root; when frozen by PyInstaller use the bundle temp dir.
+    """Web root for static dashboard assets.
 
-    config.py lives in server_app/, so the project root is two levels up
-    (parent of the package directory).
+    Resolution order:
+    1. PyInstaller onefile bundle -> extracted _MEIPASS dir.
+    2. Wheel install -> server_app/web/ (assets staged by setup.py).
+    3. Source checkout -> repo root (parent of the package directory).
     """
+    pkg = Path(__file__).resolve().parent
     if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
         return Path(sys._MEIPASS)
-    return Path(__file__).resolve().parent.parent
+    staged = pkg / "web"
+    if (staged / "index.html").is_file():
+        return staged
+    return pkg.parent
 
 
 def log(msg):
