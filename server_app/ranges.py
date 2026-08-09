@@ -150,6 +150,11 @@ def range_detail(range_key, start, end):
     if range_key == "24h":
         return "%s \u2192 %s" % (
             _ts_local(start).strftime("%b %d %H:%M"), _ts_local(end).strftime("%b %d %H:%M"))
+    if range_key == "custom":
+        # end is exclusive (midnight after `to`); label the last *selected* day.
+        last = end - 86_400_000 if end == day_start_ms(end) else end
+        return "%s-%s" % (
+            _ts_local(start).strftime("%b %d"), _ts_local(last).strftime("%b %d %Y"))
     return "%s-%s" % (
         _ts_local(start).strftime("%b %d"), _ts_local(end).strftime("%b %d %Y"))
 
@@ -180,6 +185,9 @@ def build_buckets(range_key, start, end, token_rows):
     day_index = {}
     d = _ts_local(start).date()
     d_end = _ts_local(end).date()
+    # custom: end is exclusive (midnight after `to`); drop the trailing empty day
+    if range_key == "custom" and end == day_start_ms(end):
+        d_end -= datetime.timedelta(days=1)
     while d <= d_end:
         days.append((d, {"label": d.strftime("%b %d"), "requests": 0, "input": 0, "output": 0}))
         d += datetime.timedelta(days=1)

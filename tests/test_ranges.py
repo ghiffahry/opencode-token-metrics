@@ -87,6 +87,28 @@ def test_range_bounds_custom():
     assert range_bounds("custom", from_date="2026-08-03", to_date="2026-08-01") == (None, None)
 
 
+def test_range_detail_custom_inclusive_end():
+    """Custom label shows the last *selected* day, not the exclusive midnight."""
+    f = parse_custom_day("2026-08-01")
+    t = parse_custom_day("2026-08-03")
+    start, end = range_bounds("custom", from_date="2026-08-01", to_date="2026-08-03")
+    label = range_detail("custom", start, end)
+    assert label == "Aug 01-Aug 03 2026"
+    assert "\u2013" not in label
+    assert "\u2014" not in label
+
+
+def test_build_buckets_custom_no_trailing_empty_day():
+    start = parse_custom_day("2026-08-01")
+    end = start + 3 * 86_400_000  # midnight after Aug 3 (exclusive)
+    rows = [{"time_created": start + 86_400_000 + 3600_000, "tokens_input": 500, "tokens_output": 0}]
+    days = ranges.build_buckets("custom", start, end, rows)
+    assert len(days) == 3  # Aug 1, Aug 2, Aug 3 - no empty Aug 4
+    assert days[1]["requests"] == 1
+    assert days[1]["input"] == 500
+    assert days[2]["requests"] == 0
+
+
 def test_prev_bounds():
     start, end = range_bounds("7d")
     ps, pe = prev_bounds("7d", start, end)
