@@ -87,6 +87,7 @@
   --chart-input-border: #0e555a;
   --chart-output: #3a6ea5;
   --chart-output-border: #2d5988;
+  --chart-bar: #64748b;
   --chart-grid: rgba(71, 85, 105, 0.1);
   --chart-axis: #64748b;
   --chart-tooltip-bg: #172033;
@@ -145,6 +146,7 @@
   --chart-input-border: #76d4ce;
   --chart-output: #70a7d8;
   --chart-output-border: #9cc6e8;
+  --chart-bar: #94a3b8;
   --chart-grid: rgba(148, 163, 184, 0.1);
   --chart-axis: #8b98a8;
   --chart-tooltip-bg: #252a30;

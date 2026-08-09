@@ -11,7 +11,7 @@ var burnChart = null;
 var countdownTimer = null;
 
 function fmtClock(ms) {
-  if (!ms) return "—";
+  if (!ms) return "…";
   var d = new Date(ms);
   var now = new Date();
   var prefix = d.toDateString() === now.toDateString()
@@ -77,7 +77,7 @@ function renderCountdown(resetAt) {
   if (!el) return;
   if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
   function tick() {
-    el.textContent = resetAt ? fmtDuration(resetAt - Date.now()) : "—";
+    el.textContent = resetAt ? fmtDuration(resetAt - Date.now()) : "…";
     updateTimelineHint(resetAt);
   }
   tick();
@@ -245,9 +245,9 @@ export function renderBudget(snap) {
   if (bp) bp.textContent = pctRaw.toFixed(1) + "% used";
   fill("#budgetBar", pctRaw, over);
   var burn = $("#quotaBurn");
-  if (burn) burn.textContent = w.burnRate != null ? formatTokens(w.burnRate) + "/h" : "—";
+  if (burn) burn.textContent = w.burnRate != null ? formatTokens(w.burnRate) + "/h" : "…";
   var burnRate = $("#quotaBurnRate");
-  if (burnRate) burnRate.textContent = w.burnRate != null ? formatTokens(w.burnRate) + "/h" : "—";
+  if (burnRate) burnRate.textContent = w.burnRate != null ? formatTokens(w.burnRate) + "/h" : "…";
   $("#quotaRequests").textContent = nf.format(w.requests) + " / " + nf.format(w.requestLimit || 0);
   renderBurnChart(w);
 
@@ -260,7 +260,7 @@ export function renderBudget(snap) {
       proj.textContent = formatTokens(w.projectedAtReset);
       proj.title = "Projected " + (w.projectedPct || 0).toFixed(1) + "% of quota at reset";
     } else {
-      proj.textContent = "—";
+      proj.textContent = "…";
       proj.removeAttribute("title");
     }
   }
@@ -269,9 +269,9 @@ export function renderBudget(snap) {
     ? (w.projectedPct.toFixed(1) + "% of quota") : "Insufficient data for a projection";
   fill("#projBar", w.projectedPct != null ? w.projectedPct : 0, false, w.projectedPct != null);
   $("#cmpCurrent").textContent = formatTokens(used);
-  $("#cmpProjected").textContent = w.projectedAtReset != null ? formatTokens(w.projectedAtReset) : "—";
+  $("#cmpProjected").textContent = w.projectedAtReset != null ? formatTokens(w.projectedAtReset) : "…";
   $("#cmpGrowth").textContent = w.projectedAtReset != null
-    ? "+" + formatTokens(Math.max(0, w.projectedAtReset - used)) : "—";
+    ? "+" + formatTokens(Math.max(0, w.projectedAtReset - used)) : "…";
   var exp = $("#quotaExposure");
   if (exp) {
     exp.hidden = false;
@@ -303,7 +303,7 @@ function renderBudgetChart(snap) {
     chartRegistry.budget = null;
   }
   var hist = snap.history || [];
-  var barColor = cssVar("--chart-bar");
+  var barColor = cssVar("--chart-bar") || "#64748b";
   var colors = hist.map(function (_, i) {
     return i === hist.length - 1 ? hexToRgba(barColor, 1) : hexToRgba(barColor, 0.55);
   });
