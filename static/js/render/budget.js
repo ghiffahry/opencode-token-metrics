@@ -58,12 +58,27 @@ function setDot(el, cls) {
   el.className = "q-status__dot" + (cls ? " is-" + cls : "");
 }
 
+function fmtRemain(ms) {
+  var s = Math.max(0, Math.floor(ms / 1000));
+  var h = Math.floor(s / 3600);
+  s -= h * 3600;
+  var m = Math.floor(s / 60);
+  return h > 0 ? h + "h " + m + "m" : m + "m";
+}
+
+function updateTimelineHint(resetAt) {
+  var el = $("#quotaTimelineHint");
+  if (!el) return;
+  el.textContent = resetAt ? fmtRemain(resetAt - Date.now()) + " lagi sampai reset" : "";
+}
+
 function renderCountdown(resetAt) {
   var el = $("#quotaResetCount");
   if (!el) return;
   if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
   function tick() {
     el.textContent = resetAt ? fmtDuration(resetAt - Date.now()) : "—";
+    updateTimelineHint(resetAt);
   }
   tick();
   countdownTimer = setInterval(tick, 3000);
@@ -82,6 +97,9 @@ function renderTimeline(w) {
   if (cell) cell.style.left = (frac * 100).toFixed(1) + "%";
   var marker = $("#quotaTimelineMarker");
   if (marker) marker.style.left = (frac * 100).toFixed(1) + "%";
+  var fill = $("#quotaTimelineFill");
+  if (fill) fill.style.width = (frac * 100).toFixed(1) + "%";
+  updateTimelineHint(w.end);
 }
 
 function renderBurnChart(w) {
