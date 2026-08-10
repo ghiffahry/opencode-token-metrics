@@ -11,13 +11,15 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent
-SERVER_PY = ROOT / "server.py"
 TOOLS_GLOB = sorted((ROOT / "tools").glob("*.py"))
+APP_GLOB = sorted((ROOT / "app").glob("*.py*"))
+SERVER_GLOB = sorted((ROOT / "server_app").rglob("*.py"))
+WEB_GLOB = sorted((ROOT / "web").rglob("*.py"))
 
 
 def main():
-    targets = [str(SERVER_PY)] + [str(p) for p in TOOLS_GLOB]
-    if not (SERVER_PY.exists() and targets):
+    targets = [str(p) for p in TOOLS_GLOB + APP_GLOB + SERVER_GLOB + WEB_GLOB]
+    if not targets:
         print("pre-commit: no Python sources to check")
         return 0
 
