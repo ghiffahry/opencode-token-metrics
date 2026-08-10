@@ -1,18 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""Token Metrics desktop app (pywebview + embedded loopback server).
-
-Runs the bridge inside this process on a private 127.0.0.1 port
-and opens a native window (Microsoft Edge WebView2 via pywebview).
-No browser tab, no exposed server: only a loopback port that the desktop
-window talks to.
-
-Usage:
-  py desktop.py            # console version
-  double-click desktop.pyw # no console window
-  TokenMetrics.bat         # launcher
-"""
-
 import json
 import sys
 import threading
