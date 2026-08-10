@@ -1,8 +1,5 @@
-"""Read-only SQLite access to the opencode database plus model helpers."""
-
 import json
 import sqlite3
-
 from .cache import _cache
 from .config import DEFAULT_CONTEXT, MODELS_CACHE, MODEL_CONTEXT_OVERRIDES, db_path
 
@@ -12,7 +9,6 @@ def connect():
     con.row_factory = sqlite3.Row
     return con
 
-
 def q(sql, params=()):
     con = connect()
     try:
@@ -20,9 +16,7 @@ def q(sql, params=()):
     finally:
         con.close()
 
-
 def model_providers():
-    """bare model id -> provider, derived from the models.dev cache."""
     try:
         mtime = MODELS_CACHE.stat().st_mtime
     except OSError:
@@ -44,18 +38,11 @@ def model_providers():
     _cache["providers"] = (mtime, prov)
     return prov
 
-
 _modelid_map_key = None
 _modelid_map_value = None
 
 
 def _modelid_map():
-    """Resolved model key -> set(raw message modelIDs).
-
-    One scan over the message table (rebuilt only when the DB or models.dev
-    cache changes) serves every model filter; callers that previously ran a
-    full-scan query per call now do an O(1) lookup.
-    """
     global _modelid_map_key, _modelid_map_value
     try:
         key = (db_path().stat().st_mtime,
@@ -77,7 +64,6 @@ def _modelid_map():
     _modelid_map_value = out
     return out
 
-
 def _modelid_candidates(model):
     """Raw message modelID values whose resolved key equals `model`."""
     if not model or model in ("", "(unknown)", "all", "unknown"):
@@ -87,11 +73,6 @@ def _modelid_candidates(model):
 
 
 def _msg_model_cond(model, col="data"):
-    """WHERE fragment matching a message's modelID column to a normalized key.
-
-    Messages are attributed by their own modelID (message-level), so sessions
-    that switched models contribute to each model they actually used.
-    """
     if not model or model in ("", "(unknown)", "all"):
         return "", ()
     if model == "unknown":
@@ -105,12 +86,6 @@ def _msg_model_cond(model, col="data"):
 
 
 def session_scope(project, model=None, tbl=None):
-    """WHERE fragment for the session table restricted to directory + model.
-
-    A session matches a model when it contains at least one assistant message
-    produced by that model (message-level attribution). `tbl` prefixes
-    columns when the session table is aliased (e.g. "s").
-    """
     col = lambda name: ("%s.%s" % (tbl, name)) if tbl else name
     parts, params = [], []
     if project:
@@ -126,7 +101,6 @@ def session_scope(project, model=None, tbl=None):
 
 
 def msg_scope(project, model=None):
-    """WHERE fragment for the message table restricted to directory + model."""
     parts, params = [], []
     if project:
         parts.append("session_id IN (SELECT id FROM session WHERE directory = ?)")
@@ -141,10 +115,6 @@ def msg_scope(project, model=None):
 
 
 def part_scope(project, model=None):
-    """WHERE fragment for the part table (errors) restricted to directory + model.
-
-    Parts are attributed through their parent message's modelID.
-    """
     parts, params = [], []
     if project:
         parts.append("session_id IN (SELECT id FROM session WHERE directory = ?)")
@@ -156,7 +126,6 @@ def part_scope(project, model=None):
     if not parts:
         return "", ()
     return " AND " + " AND ".join(parts), tuple(params)
-
 
 def parse_model(raw):
     if not raw:
@@ -176,9 +145,7 @@ def parse_model(raw):
         return mid
     return "%s/%s" % (pid, mid)
 
-
 def message_model(session_raw, message_raw):
-    """Resolve the model used by a message, not merely the session default."""
     mid = str(message_raw or "").strip()
     if not mid:
         return parse_model(session_raw)
@@ -228,6 +195,3 @@ def msg_duration_seconds(data):
     if not comp or not created or comp <= created:
         return None
     return (comp - created) / 1000.0
-
-
-
