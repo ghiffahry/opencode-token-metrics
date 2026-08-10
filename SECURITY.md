@@ -39,7 +39,7 @@ public internet is not supported.
 ## Reporting a vulnerability
 
 Please report security issues privately via GitHub Security Advisories:
-https://github.com/ghiffahry/token-metrics/security/advisories/new
+https://github.com/ghiffahry/opencode-token-metrics/security/advisories/new
 
 Include: affected version, reproduction steps, and impact. Do not open a
 public issue for a vulnerability.

@@ -30,6 +30,7 @@ app/                     Desktop app (pywebview + server loopback tertanam)
   desktop.py             Entry desktop: server tertanam + jendela native
   desktop.pyw            Launcher tanpa console window (double-click)
   config.json            Konfigurasi desktop (dbPath, ukuran window, port), auto-dibuat
+  config.example.json    Template konfigurasi desktop (contoh yang ter-commit)
 server_app/              Package backend: config, db, ranges, estimates, context, routes, httpd
   overview/              Penghitung agregat per rentang (models, sessions, requests, realtime, _empty)
 web/                     Frontend, halaman dan aset statis

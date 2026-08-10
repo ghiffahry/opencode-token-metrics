@@ -5,7 +5,7 @@ Thanks for helping with Token Metrics.
 ## Setup
 
 ```bash
-py -m pip install -r requirements.txt   # desktop GUI deps (server is stdlib-only)
+py -m pip install -e ".[desktop]"       # desktop GUI deps (server is stdlib-only)
 py -m pip install pytest                # python tests
 git config core.hooksPath tools/git-hooks   # install pre-commit syntax check
 ```

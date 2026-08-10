@@ -24,8 +24,8 @@ desktop = ["pywebview>=4.0", "Pillow>=9.0"]
 build = ["pyinstaller"]
 
 [project.urls]
-Homepage = "https://github.com/ghiffahry/token-metrics"
-Source = "https://github.com/ghiffahry/token-metrics"
+Homepage = "https://github.com/ghiffahry/opencode-token-metrics"
+Source = "https://github.com/ghiffahry/opencode-token-metrics"
 
 [project.scripts]
 token-metrics = "server_app.httpd:main"

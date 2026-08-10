@@ -1,4 +1,0 @@
-# Runtime deps for the desktop GUI (py app/desktop.py).
-# The bridge server itself is stdlib-only.
-pywebview>=4.0
-Pillow>=9.0

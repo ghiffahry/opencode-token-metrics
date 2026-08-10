@@ -29,3 +29,12 @@ Thumbs.db
 # npm pack artifacts + pytest cache
 *.tgz
 .pytest_cache/
+
+# Local databases, env files, generated exports/logs
+*.db
+*.sqlite
+*.sqlite3
+.env
+.env.*
+logs/
+exports/
