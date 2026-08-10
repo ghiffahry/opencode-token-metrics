@@ -6,7 +6,7 @@ import mimetypes
 import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from .config import (BASE_DIR, HOST, PORT, STATIC_TYPES, VERSION, db_path, log, set_db_path)
+from .config import (BASE_DIR, DATA_ROOT, HOST, PORT, STATIC_TYPES, VERSION, db_path, log, set_db_path)
 from .routes import handle_api
 
 class Handler(BaseHTTPRequestHandler):
@@ -56,8 +56,12 @@ class Handler(BaseHTTPRequestHandler):
         rel = path.lstrip("/")
         if not rel:
             rel = "index.html"
-        file_path = (BASE_DIR / rel).resolve()
-        if not str(file_path).startswith(str(BASE_DIR.resolve())) or not file_path.is_file():
+        if rel.startswith("graphify-out/"):
+            root = DATA_ROOT
+        else:
+            root = BASE_DIR
+        file_path = (root / rel).resolve()
+        if not str(file_path).startswith(str(root.resolve())) or not file_path.is_file():
             self._send(404, b"not found", "text/plain")
             return
 

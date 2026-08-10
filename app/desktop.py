@@ -75,9 +75,9 @@ def main():
     cfg = load_config()
     ensure_config(cfg)
 
-    db_path = (cfg.get("dbPath") or "").strip()
-    if db_path:
-        set_db_path(db_path)
+    db_path_str = (cfg.get("dbPath") or "").strip()
+    if db_path_str:
+        set_db_path(db_path_str)
     if not db_path().exists():
         log("WARNING: opencode database not found: %s" % db_path())
 
