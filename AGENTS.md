@@ -33,3 +33,8 @@ The opencode plugin lives in `opencode/` (npm package `opencode-token-metrics`).
 It captures live token usage from opencode events and writes `state.json` under
 `TOKENMETRICS_STATE` (default `~/.local/share/token-metrics/`). Keep it
 dependency-light and synchronous-friendly.
+
+Pure quota-window math lives in `opencode/plugins/quota.js` and must stay in
+sync with `server_app/ranges.py::quota_window_bounds`; both are unit-tested
+(`opencode/test/` via `npm test`, `tests/` via `pytest`). Plugin changes ship
+tests, not just `node --check`.

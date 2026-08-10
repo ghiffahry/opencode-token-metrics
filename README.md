@@ -106,6 +106,8 @@ Tidak ada file `.env`. Konfigurasi lewat dua tempat: `app/config.json` untuk des
 | `TOKENMETRICS_QUOTA_WINDOW_HOURS` | `14` | Panjang jendela reset estimasi |
 | `QUOTA_ANCHOR_HOUR` | `4` | Jam lokal awal jendela 14 jam, mengatur jatuhnya waktu reset |
 | `TOKENMETRICS_REQUEST_QUOTA` | `200` | Estimasi budget request per jendela quota |
+| `TOKENMETRICS_AUTH_TOKEN` | kosong | Token wajib untuk `/api/*` (lihat "Mengekspos server" di SECURITY.md) |
+| `TOKENMETRICS_RETENTION_DAYS` | `30` | Plugin: sesi tanpa pesan dihapus setelah N hari sejak `updated` |
 
 Nilai tanpa environment variable memakai estimasi komunitas dan diberi label `default` atau `estimated` di UI. Kapan pun angka berasal dari sumber pasti, label berubah menjadi `configured`.
 
@@ -122,7 +124,8 @@ py tools/db_stats.py       # Ringkasan database opencode (jumlah, ukuran, rentan
 py tools/export_csv.py     # Ekspor request/model per rentang ke exports/
 py tools/git_commit.py     # Stage + commit helper (conventional commits)
 py tools/build_desktop.py --build   # Bangun exe desktop (PyInstaller)
-pytest tests               # 24 unit test: ranges, estimates, plugin_state
+pytest tests               # unit test Python: ranges, estimates, plugin_state
+npm --prefix opencode test  # unit test plugin Node: window bounds, dedup, persistence
 ```
 
 Rentang yang didukung: `today`, `7d`, `30d`, `90d`, `24h`, dan `custom` (`from=YYYY-MM-DD&to=YYYY-MM-DD`, inklusif dan dibatasi sampai hari ini). Sebagian endpoint menerima filter `?project=<directory>` untuk membatasi hasil ke satu project.
@@ -173,6 +176,16 @@ Skor kelulusan proyek ini adalah jujur tentang ketidakpastian: angka estimasi di
 
 Plugin menangkap event pemakaian sesaat terjadi dan menyimpan `state.json` (default `~/.local/share/token-metrics/state.json`). Dashboard membacanya lewat `GET /api/plugin_state` dan menampilkan ringkasan di status strip; item tetap tersembunyi sampai plugin menulis file pertama. Detail instalasi dan environment variable plugin ada di `opencode/README.md`.
 
+### Batas validitas data
+
+Agar angka tidak dibaca keliru, tiga jenis angka sengaja tidak dicampur:
+
+- **Database = aktual historis.** Angka dari `opencode.db` mencerminkan pesan yang benar-benar tercatat, apa pun kondisi plugin.
+- **Jendela quota = estimasi.** Penyedia tidak mempublikasikan waktu reset; dashboard memodelkannya (default 14 jam, anchor 04:00 lokal) dan menandainya `estimated`. Bukan fakta penyedia.
+- **Plugin = event yang tertangkap.** Angka plugin hanya mencakup event sejak plugin aktif; sesi sebelum plugin dipasang tidak dihitung. Berbeda dengan database yang mencakup seluruh histori.
+
+Dashboard menandai sumbernya di UI (`default`/`configured` untuk kuota, status strip untuk plugin); jangan memperlakukan estimasi sebagai tagihan resmi.
+
 ---
 
 ## API Ringkas
@@ -191,6 +204,11 @@ Base URL: `http://127.0.0.1:8124` (desktop app memakai port acak, frontend menur
 | `GET /api/realtime` | Watermark, sesi aktif, R/TPM menit terakhir, kuota jendela |
 | `GET /api/plugin_state` | State.json plugin bila ada (`exists: false` bila belum ditulis) |
 | `GET /api/graph` | Knowledge graph dari `graphify-out/graph.json` |
+
+Server hanya mengizinkan bind non-loopback bila diberi token (`--auth-token` atau
+`TOKENMETRICS_AUTH_TOKEN`); jika tidak, token di-generate acak dan dicetak di
+console saat start. Semua `/api/*` kemudian menuntut token via `?token=`,
+`Authorization: Bearer`, atau cookie `tm_auth`. Lihat `SECURITY.md`.
 
 ---
 
@@ -220,6 +238,8 @@ Graph hanya menampilkan node project yang relevan dengan filter aktif; project l
 | Angka kecil atau nol | Pengguna opencode saat ini sedikit pesan `assistant`; coba rentang `90d` |
 | Port 8124 dipakai | Pilih port lain dengan `--port` |
 | Section Graph kosong | Jalankan `graphify update .` lalu tekan Refresh di dashboard |
+| Bind remote menuntut token | `py -m server_app.httpd --host 0.0.0.0 --auth-token <token>`; tanpa token, server auto-generate dan mencetaknya di console |
+| Plugin tidak mencatat sesi lama | Plugin hanya menangkap event sejak aktif; histori penuh ada di database (`90d`) |
 
 ---
 

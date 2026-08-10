@@ -1,0 +1,31 @@
+---
+name: Bug report
+about: Report a problem with the dashboard, server, or plugin
+title: "[bug] "
+labels: bug
+assignees: ''
+---
+
+**Describe the bug**
+A clear and concise description.
+
+**Repro**
+Steps to reproduce:
+1.
+2.
+3.
+
+**Expected vs actual**
+What should happen vs what happened.
+
+**Environment**
+- OS:
+- Python version (`py --version`):
+- Node version (`node --version`):
+- OpenCode version (if plugin-related):
+- Started via: `py -m server_app.httpd` / desktop app / plugin
+- Any `TOKENMETRICS_*` env vars set:
+
+**Data note**
+If the bug is quota-related: is the dashboard showing `estimated` labels?
+Plugin numbers only cover events since the plugin became active.

@@ -1,0 +1,19 @@
+---
+name: Feature request
+about: Suggest an idea
+title: "[feat] "
+labels: enhancement
+assignees: ''
+---
+
+**Problem**
+What need is not met today?
+
+**Proposed solution**
+What you'd like to see.
+
+**Alternatives**
+Anything else you considered.
+
+**Scope**
+Dashboard / server / plugin / build / docs

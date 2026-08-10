@@ -35,4 +35,18 @@ jobs:
       - name: Node syntax check (opencode plugin)
         run: |
           node --check opencode/plugins/token-metrics.js
+          node --check opencode/plugins/quota.js
           echo "plugin ok"
+
+      - name: Plugin unit + behaviour tests
+        working-directory: opencode
+        run: |
+          npm ci
+          npm test
+          echo "plugin tests ok"
+
+      - name: Plugin npm pack verification (tarball contents + LICENSE)
+        working-directory: opencode
+        run: |
+          npm run lint
+          npm run pack:check
