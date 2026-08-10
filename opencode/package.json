@@ -4,8 +4,13 @@
   "description": "Realtime token usage & quota monitor for opencode - captures usage from opencode events and writes a local state.json",
   "type": "module",
   "main": "plugins/token-metrics.js",
+  "exports": {
+    ".": "./plugins/token-metrics.js",
+    "./quota": "./plugins/quota.js"
+  },
   "files": [
-    "plugins"
+    "plugins",
+    "LICENSE"
   ],
   "license": "MIT",
   "keywords": [
@@ -17,8 +22,24 @@
     "monitor",
     "token-metrics"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ghiffahry/token-metrics.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ghiffahry/token-metrics/issues"
+  },
+  "homepage": "https://github.com/ghiffahry/token-metrics#readme",
+  "scripts": {
+    "test": "node --test",
+    "lint": "node --check plugins/token-metrics.js && node --check plugins/quota.js",
+    "pack:check": "npm pack --dry-run"
+  },
   "dependencies": {
     "@opencode-ai/plugin": "^1.18.15"
+  },
+  "peerDependencies": {
+    "@opencode-ai/plugin": ">=1.18.15"
   },
   "engines": {
     "node": ">=18"

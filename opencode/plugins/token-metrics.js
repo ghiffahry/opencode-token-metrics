@@ -14,25 +14,16 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { mkdirSync, writeFileSync, renameSync, readFileSync } from "node:fs";
 import { tool } from "@opencode-ai/plugin";
+import { quotaConfig, windowBounds, sumTokens, statusFor, fmtNum, fmtCompact, fmtDuration } from "./quota.js";
 
-const DEFAULTS = { limit: 2_500_000, hours: 14, anchorHour: 4 };
 const MAX_MESSAGES = 5000;
 const PERSIST_DEBOUNCE_MS = 750;
+const DEFAULT_RETENTION_DAYS = 30;
 
-function quotaConfig() {
-  const num = (env, fallback) => {
-    const v = Number(process.env[env]);
-    return Number.isFinite(v) && v > 0 ? v : fallback;
-  };
-  const limit = num("TOKENMETRICS_QUOTA_TOKENS", DEFAULTS.limit);
-  const hours = num("TOKENMETRICS_QUOTA_WINDOW_HOURS", DEFAULTS.hours);
-  const anchorHour = num("TOKENMETRICS_QUOTA_ANCHOR_HOUR", DEFAULTS.anchorHour);
-  return {
-    limit,
-    hours,
-    anchorHour,
-    source: process.env.TOKENMETRICS_QUOTA_TOKENS ? "configured" : "default",
-  };
+function retentionMs(env = process.env) {
+  const n = Number(env.TOKENMETRICS_RETENTION_DAYS);
+  const days = Number.isFinite(n) && n > 0 ? n : DEFAULT_RETENTION_DAYS;
+  return days * 86_400_000;
 }
 
 function statePath() {
@@ -61,31 +52,6 @@ function loadState(p) {
   }
 }
 
-// Window [start, end) exactly like the dashboard: boundaries fall at
-// anchorHour + k*hours (e.g. 04:00 and 18:00 for 14h at anchor 4).
-function windowBounds(now, cfg) {
-  const d = new Date(now);
-  const at = new Date(d);
-  at.setHours(cfg.anchorHour, 0, 0, 0);
-  let end = at.getTime();
-  if (end <= now) end += cfg.hours * 3600_000;
-  return { start: end - cfg.hours * 3600_000, end };
-}
-
-function sumTokens(t) {
-  if (!t) return 0;
-  return (t.input || 0) + (t.output || 0) + (t.reasoning || 0) +
-    (t.cache?.read || 0) + (t.cache?.write || 0);
-}
-
-function statusFor(pct, willExhaust) {
-  if (willExhaust || pct >= 100) return "exhaustion";
-  if (pct >= 90) return "critical";
-  if (pct >= 75) return "high";
-  if (pct >= 50) return "watch";
-  return "healthy";
-}
-
 const TOAST_TIERS = [
   { at: 90, label: "Token quota CRITICAL", variant: "warning" },
   { at: 75, label: "Token quota HIGH", variant: "warning" },
@@ -97,19 +63,21 @@ export const TokenMetricsPlugin = async ({ client }) => {
   const state = loadState(path);
   let persistTimer = null;
 
+  const persistNow = () => {
+    state.generated = new Date().toISOString();
+    try {
+      mkdirSync(dirname(path), { recursive: true });
+      const tmp = path + ".tmp";
+      writeFileSync(tmp, JSON.stringify(state, null, 2));
+      renameSync(tmp, path);
+    } catch {
+      // never let persistence break the host
+    }
+  };
+
   const persist = () => {
     if (persistTimer) clearTimeout(persistTimer);
-    persistTimer = setTimeout(() => {
-      state.generated = new Date().toISOString();
-      try {
-        mkdirSync(dirname(path), { recursive: true });
-        const tmp = path + ".tmp";
-        writeFileSync(tmp, JSON.stringify(state, null, 2));
-        renameSync(tmp, path);
-      } catch {
-        // never let persistence break the host
-      }
-    }, PERSIST_DEBOUNCE_MS);
+    persistTimer = setTimeout(persistNow, PERSIST_DEBOUNCE_MS);
   };
 
   function recomputeSession(sessionID) {
@@ -148,6 +116,19 @@ export const TokenMetricsPlugin = async ({ client }) => {
         const i = s.messageIDs.indexOf(oldest);
         if (i >= 0) s.messageIDs.splice(i, 1);
       }
+    }
+  }
+
+  // Retention: drop sessions that hold no messages and have not been
+  // touched within the retention window. Message bodies are already capped
+  // by pruneMessages; this stops session metadata from growing forever.
+  function pruneSessions(now) {
+    const cutoff = now - retentionMs();
+    for (const id in state.sessions) {
+      const s = state.sessions[id];
+      if (s.messageIDs.length > 0) continue;
+      if (!s.updated || s.updated >= cutoff) continue;
+      delete state.sessions[id];
     }
   }
 
@@ -222,6 +203,7 @@ export const TokenMetricsPlugin = async ({ client }) => {
     if (prev === undefined) s.messageIDs.push(info.id);
     recomputeSession(info.sessionID);
     pruneMessages();
+    pruneSessions(Date.now());
     const win = recomputeWindow(Date.now());
     maybeToast(win);
     persist();
@@ -234,20 +216,6 @@ export const TokenMetricsPlugin = async ({ client }) => {
     if (info.directory) s.directory = info.directory;
     persist();
   }
-
-  const fmtNum = (n) => Math.round(n).toLocaleString("en-US");
-  const fmtCompact = (n) => {
-    if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
-    if (n >= 1_000) return (n / 1_000).toFixed(0) + "K";
-    return String(Math.round(n));
-  };
-  const fmtDuration = (ms) => {
-    const s = Math.max(0, Math.floor(ms / 1000));
-    const h = Math.floor(s / 3600);
-    const m = Math.floor((s % 3600) / 60);
-    if (h > 0) return `${h}h ${m}m`;
-    return `${m}m`;
-  };
 
   function summary(detail) {
     const win = state.window;
@@ -292,9 +260,21 @@ export const TokenMetricsPlugin = async ({ client }) => {
       token_metrics: tool({
         description:
           "Return live token usage and estimated quota-window status captured from opencode events. " +
-          "Short text summary by default; pass detail=true for per-session breakdown and the state file path.",
-        args: { detail: tool.schema.boolean().optional() },
+          "Short text summary by default; pass detail=true for per-session breakdown and the state file path. " +
+          "Pass reset=true to clear captured state and start over (retention is otherwise automatic).",
+        args: {
+          detail: tool.schema.boolean().optional(),
+          reset: tool.schema.boolean().optional(),
+        },
         async execute(args) {
+          if (args?.reset) {
+            state.sessions = {};
+            state.messages = {};
+            state.window = null;
+            state.notified = {};
+            persistNow();
+            return "Token Metrics state reset. Monitoring continues from now.";
+          }
           return summary(!!args?.detail);
         },
       }),
