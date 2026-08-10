@@ -1,15 +1,6 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""Stop the Token Metrics bridge started by tools/start.py.
-
-Uses the PID file first; falls back to finding the PID listening on the port.
-"""
-
 import argparse
 import time
-
 import common
-
 
 def main():
     ap = argparse.ArgumentParser(description="Stop the Token Metrics bridge")
