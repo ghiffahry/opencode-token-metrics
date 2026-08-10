@@ -1,5 +1,3 @@
-"""HTTP server: static dashboard files + /api/* routing."""
-
 import argparse
 import json
 import mimetypes
@@ -16,8 +14,6 @@ class Handler(BaseHTTPRequestHandler):
     server_version = "TokenMetrics/%s" % VERSION
 
     def _authorized(self, query):
-        """True when the request carries the auth token (cookie, header or
-        query param). No token configured -> open."""
         token = cfg.AUTH_TOKEN
         if not token:
             return True
@@ -101,11 +97,6 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def make_server(host=HOST, port=PORT):
-    """Bind and return a started ThreadingHTTPServer.
-
-    port 0 -> OS picks a free port (returned as the second element).
-    Compatible with embedding (desktop.py) and the CLI.
-    """
     srv = ThreadingHTTPServer((host, port), Handler)
     actual = srv.server_address[1]
     log("=" * 58)
