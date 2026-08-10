@@ -1,22 +1,11 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""Start the Token Metrics bridge as a detached background process.
-
-Usage:
-  py tools/start.py            # default port 8124
-  py tools/start.py --port 9000 --host 0.0.0.0
-"""
-
 import argparse
 import os
 import subprocess
 import sys
 import time
-
 import common
 
 LOG_FILE = common.LOG_DIR / "server.log"
-
 
 def spawn(port, host):
     common.ensure_dirs()
