@@ -1,12 +1,4 @@
-"""Heuristic estimate of request token composition.
-
-opencode.db never records per-category token attribution, so this is a
-labelled estimate - never fabricated data. The result is normalized so the
-sum always equals the request's real input total.
-"""
-
 from pathlib import Path
-
 from .config import CONTEXT_ESTIMATE_DEFAULTS
 
 def _read_text(p):
@@ -15,18 +7,7 @@ def _read_text(p):
     except Exception:
         return ""
 
-
 def estimate_composition(directory, input_total, req=None):
-    """Estimate how a request's real input tokens split across categories.
-
-    opencode.db never records per-category token attribution, so this is a
-    labelled heuristic - NOT a recorded breakdown. The static categories
-    (system/rules/skills/mcp/tools) are sized from files that actually exist
-    on disk (AGENTS.md, .rules, SKILL.md, opencode.json); cached tokens are
-    treated as the repeated prefix and the uncached remainder is split
-    between conversation/workspace/retrieved. The result is normalized so the
-    sum always equals the request's actual input total - no tokens invented.
-    """
     directory = directory or ""
     d = Path(directory) if Path(directory).is_dir() else None
 
@@ -88,8 +69,6 @@ def estimate_composition(directory, input_total, req=None):
 
     total = sum(cats.values())
     if total != input_total and total > 0:
-        # Distribute the delta across the largest buckets first (they are the
-        # heuristic/static part), clamping at zero, until the sum is exact.
         diff = input_total - total
         for key in sorted(cats, key=cats.get, reverse=True):
             if diff == 0:
