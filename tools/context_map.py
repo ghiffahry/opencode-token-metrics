@@ -1,11 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""Print the model -> context-window map (models.json + overrides + default).
-
-Usage:
-  py tools/context_map.py
-"""
-
 import sys
 from pathlib import Path
 
