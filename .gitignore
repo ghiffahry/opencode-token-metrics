@@ -25,3 +25,7 @@ node_modules/
 .idea/
 .DS_Store
 Thumbs.db
+
+# npm pack artifacts + pytest cache
+*.tgz
+.pytest_cache/
