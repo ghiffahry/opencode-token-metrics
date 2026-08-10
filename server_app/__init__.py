@@ -1,9 +1,3 @@
-"""Token Metrics - local bridge package (split across submodules).
-
-Importing this package exposes the public API used by the desktop app,
-the tools/ scripts, and the HTTP server (server_app.httpd).
-"""
-
 from .cache import _cache, cache_get_or
 from .config import (
     ACTIVE_WINDOW_MS,
