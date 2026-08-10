@@ -2,7 +2,7 @@
 
 # Token Metrics
 
-**Dashboard pemantau token API opencode, dari database lokal menjadi panel metrik yang siap dikaji.**
+**Dashboard realtime monitoring token API opencode, dari database lokal menjadi metrik model yang divisualisasikan.**
 
 ![Python](https://img.shields.io/badge/python-%3E%3D3.8-brightgreen)
 ![UI](https://img.shields.io/badge/ui-pywebview%20%7C%20Edge%20WebView2-blue)
@@ -15,11 +15,7 @@
 
 ## Tentang Proyek Ini
 
-Pengguna opencode bebas memakai token API sampai batas kuota free tier, tapi berapa sisa kuota, berapa context window yang terpakai, dan sesi mana yang paling boros biasanya baru terasa saat sudah kena limit. Token Metrics menjawab tiga pertanyaan itu secara langsung dari database opencode yang asli.
-
-Cara kerjanya sederhana. Server kecil membaca database lokal, menghitung agregat per rentang waktu, lalu menyajikannya sebagai dashboard desktop atau halaman pengembangan. Tidak ada data tiruan, tidak ada database replika, dan tidak ada server yang terbuka ke publik. Angka yang tidak bisa dihitung dari database ditandai jelas sebagai estimasi, bukan disamarkan menjadi angka pasti.
-
-Pembeda proyek ini dari sekadar "membuka database" adalah lapisan keamanan data. Database dibuka read-only dengan mode WAL-safe, tidak pernah ditulis, dan setiap asumsi perhitungan didokumentasikan di dalam respons API itu sendiri.
+Pengguna opencode terkadadng bebas memakai token API sampai batas kuota free tier, tapi berapa sisa kuota, berapa context window yang terpakai, dan sesi mana yang paling boros biasanya baru terasa saat sudah kena limit. Token Metrics menjawab tiga pertanyaan itu secara langsung dari database opencode yang asli. Cara kerjanya sederhana dimana server membaca database lokal, menghitung agregat per rentang waktu, lalu menyajikannya sebagai dashboard desktop atau halaman pengembangan. Tidak ada data sintetis, tidak ada database palsu, dan tidak ada server yang terbuka ke publik. Angka yang tidak bisa dihitung dari database ditandai jelas sebagai estimasi, bukan disamarkan menjadi angka pasti. Pembeda proyek ini dari sekadar "membuka database" adalah lapisan keamanan data. Database dibuka read-only dengan mode WAL-safe, tidak pernah ditulis, dan setiap asumsi perhitungan didokumentasikan di dalam respons API itu sendiri.
 
 ---
 
@@ -123,7 +119,6 @@ py tools/start.py                 # Start server terpisah (detached), tulis logs
 py tools/stop.py                  # Stop server yang berjalan
 py tools/db_stats.py       # Ringkasan database opencode (jumlah, ukuran, rentang)
 py tools/export_csv.py     # Ekspor request/model per rentang ke exports/
-py tools/git_commit.py     # Stage + commit helper (conventional commits)
 py tools/build_desktop.py --build   # Bangun exe desktop (PyInstaller)
 pytest tests               # unit test Python: ranges, estimates, plugin_state
 npm --prefix opencode test  # unit test plugin Node: window bounds, dedup, persistence
