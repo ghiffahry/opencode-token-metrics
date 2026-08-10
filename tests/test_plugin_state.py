@@ -1,10 +1,7 @@
-"""Unit tests for server_app.plugin_state (live .json from the opencode plugin)."""
-
 import importlib
 import json
 
 ps_mod = importlib.import_module("server_app.plugin_state")
-
 
 def test_missing_state_file(tmp_path, monkeypatch):
     missing = tmp_path / "missing" / "state.json"
