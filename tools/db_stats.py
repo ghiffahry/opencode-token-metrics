@@ -1,18 +1,9 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""Print quick statistics about the opencode database (read-only).
-
-Usage:
-  py tools/db_stats.py
-"""
-
 import sqlite3
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import common  # noqa: E402
-
+import common  
 
 def main():
     db = common.DB_PATH
