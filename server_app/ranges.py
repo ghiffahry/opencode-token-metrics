@@ -1,9 +1,3 @@
-"""Calendar / rolling range helpers and token bucketing.
-
-All calendar boundaries are computed in the analytics timezone
-(ANALYTICS_TZ) while the database timestamps stay absolute epoch-ms.
-"""
-
 import datetime
 import time
 
@@ -19,7 +13,6 @@ def now_ms():
 
 
 def tzinfo():
-    """Configured analytics timezone (ZoneInfo) or None -> local time."""
     tz = tzinfo._cache.get(ANALYTICS_TZ)
     if tz is None:
         try:
@@ -32,9 +25,7 @@ def tzinfo():
 
 tzinfo._cache = {}
 
-
 def tz_offset_str():
-    """Current UTC offset of the analytics tz, e.g. '+07:00'."""
     tz = tzinfo()
     if tz:
         d = datetime.datetime.now(tz)
@@ -48,7 +39,6 @@ def tz_offset_str():
 
 
 def day_start_ms(ts, tz=None):
-    """Local calendar midnight (analytics tz) of the timestamp's day, epoch ms."""
     tz = tz if tz is not None else tzinfo()
     if tz is None:
         d = datetime.datetime.fromtimestamp(ts / 1000)
@@ -58,14 +48,6 @@ def day_start_ms(ts, tz=None):
 
 
 def quota_window_bounds(now=None, hours=None, anchor_hour=None):
-    """Estimated provider quota window - NOT a calendar day.
-
-    The free tier evaluates quota over a ~12-14h reset window that is not
-    aligned to midnight. We model it as windows of `hours` (default 14h)
-    drifting from a fixed local clock hour (default 04:00): each window is
-    exactly `hours` long and the reset moment is deterministic, but it is
-    always an *estimate* - the provider never publishes the true reset time.
-    """
     if now is None:
         now = now_ms()
     hours = hours if hours is not None else QUOTA_WINDOW_HOURS
@@ -78,7 +60,7 @@ def quota_window_bounds(now=None, hours=None, anchor_hour=None):
     else:
         d = datetime.datetime.fromtimestamp(now / 1000, tz=tz)
         anchor0 = int(datetime.datetime(d.year, d.month, d.day, anchor_hour, tzinfo=tz).timestamp() * 1000)
-    k = (now - anchor0) // ms          # floor division handles negative offsets
+    k = (now - anchor0) // ms        
     start = anchor0 + k * ms
     end = start + ms
     return {
@@ -95,9 +77,7 @@ def _ts_local(ts):
     tz = tzinfo()
     return datetime.datetime.fromtimestamp(ts / 1000, tz=tz) if tz else datetime.datetime.fromtimestamp(ts / 1000)
 
-
 def parse_custom_day(s):
-    """'YYYY-MM-DD' -> epoch ms at local midnight in the analytics tz, or None."""
     try:
         d = datetime.datetime.strptime(str(s), "%Y-%m-%d").date()
     except Exception:
@@ -109,12 +89,6 @@ def parse_custom_day(s):
 
 
 def range_bounds(range_key, from_date=None, to_date=None):
-    """(start_ms, end_ms) for a range; None pair when custom dates are invalid.
-
-    calendar: start = local midnight of the day `days_back` ago, end = now.
-    rolling:  start = now - ms, end = now.
-    custom:   start = midnight of `from`, end = midnight after `to` capped at now.
-    """
     now = now_ms()
     if range_key == "custom":
         f = parse_custom_day(from_date)
@@ -130,8 +104,6 @@ def range_bounds(range_key, from_date=None, to_date=None):
 
 
 def prev_bounds(range_key, start, end, from_date=None, to_date=None):
-    """Window immediately before [start, end): calendar -> full prior days,
-    rolling -> previous `ms`, custom -> same length before `start`."""
     if range_key == "custom":
         length = end - start
         return start - length, start
@@ -142,7 +114,6 @@ def prev_bounds(range_key, start, end, from_date=None, to_date=None):
 
 
 def range_detail(range_key, start, end):
-    """Human label for the active period, e.g. '00:00-09:07 (+07:00)'."""
     off = tz_offset_str()
     if range_key == "today":
         return "%s-%s (%s)" % (
@@ -151,7 +122,6 @@ def range_detail(range_key, start, end):
         return "%s \u2192 %s" % (
             _ts_local(start).strftime("%b %d %H:%M"), _ts_local(end).strftime("%b %d %H:%M"))
     if range_key == "custom":
-        # end is exclusive (midnight after `to`); label the last *selected* day.
         last = end - 86_400_000 if end == day_start_ms(end) else end
         return "%s-%s" % (
             _ts_local(start).strftime("%b %d"), _ts_local(last).strftime("%b %d %Y"))
@@ -160,11 +130,6 @@ def range_detail(range_key, start, end):
 
 
 def build_buckets(range_key, start, end, token_rows):
-    """Bucket message token rows: hourly for today/24h, calendar days otherwise.
-
-    `start`/`end` are the actual (calendar or rolling) window bounds, so bucket
-    labels always match the period shown - never NOW - N*24h arithmetic.
-    """
     if range_key in ("today", "24h"):
         span_h = (end - start) / 3600_000
         n = max(1, int(span_h) if span_h == int(span_h) else int(span_h) + 1)
@@ -185,7 +150,6 @@ def build_buckets(range_key, start, end, token_rows):
     day_index = {}
     d = _ts_local(start).date()
     d_end = _ts_local(end).date()
-    # custom: end is exclusive (midnight after `to`); drop the trailing empty day
     if range_key == "custom" and end == day_start_ms(end):
         d_end -= datetime.timedelta(days=1)
     while d <= d_end:
@@ -200,6 +164,3 @@ def build_buckets(range_key, start, end, token_rows):
             days[i][1]["input"] += int(r["tokens_input"] or 0)
             days[i][1]["output"] += int(r["tokens_output"] or 0)
     return [b for _, b in days]
-
-
-
