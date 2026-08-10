@@ -1,17 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""Regenerate the graph visualization files stored in graphify-out/views/.
-
-Refreshes tree.html and callflow.html from graphify-out/graph.json and
-refreshes the graph.html copy, so the dashboard's Knowledge Graph section
-shows fresh views after a `graphify update` / `graphify extract`.
-
-Each view is post-processed:
-  * em-dashes (U+2014) are replaced with a plain hyphen;
-  * a theme hook (script + CSS) is injected so the view adapts to the
-    dashboard theme via a `?theme=light|dark` query parameter.
-"""
-
 import shutil
 import subprocess
 import sys
