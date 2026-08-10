@@ -1,21 +1,10 @@
-"""Context-usage and quota-window endpoints."""
-
 import datetime
-
 from .config import ANALYTICS_TZ, RANGES, quota_config
 from .db import context_for, load_context_map, message_model, msg_scope, q
 from .estimates import estimate_composition
 from .ranges import _ts_local, build_buckets, day_start_ms, now_ms, quota_window_bounds, range_bounds, range_detail
 
 def context_usage(range_key, project=None, model=None, from_date=None, to_date=None):
-    """Per-request context-window observability from the actual stored tokens.
-
-    Every request row carries the provider-reported totals (input, cached,
-    output, reasoning, total) plus the model's context limit, so the UI can
-    render a truthful utilisation bar without estimating anything. Category
-    composition is never fabricated here - it is a labelled estimate built
-    by estimate_composition() and marked `estimated`.
-    """
     cfg = RANGES.get(range_key, RANGES["today"])
     start, end = range_bounds(range_key, from_date, to_date)
     if start is None:
@@ -140,13 +129,6 @@ def context_usage(range_key, project=None, model=None, from_date=None, to_date=N
 
 
 def daily_budget(project=None, model=None):
-    """Free-tier quota window usage + projection + 14-day calendar history.
-
-    The quota is an *estimated* 14h window (see quota_window_bounds), NOT a
-    calendar day. `today`/`history` remain calendar-day analytics, kept
-    strictly separate from the quota window. Percentages are raw - never
-    clamped to 100%.
-    """
     now = now_ms()
     qc = quota_config()
     today = day_start_ms(now)
@@ -298,5 +280,3 @@ def daily_budget(project=None, model=None):
         "timezone": ANALYTICS_TZ,
         "generated": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     }
-
-
