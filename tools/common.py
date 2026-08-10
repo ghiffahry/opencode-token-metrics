@@ -1,7 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""Shared helpers for the tools/ scripts (paths, liveness, config)."""
-
 import os
 import socket
 import subprocess
@@ -23,7 +19,6 @@ DB_PATH = Path.home() / ".local" / "share" / "opencode" / "opencode.db"
 MODELS_CACHE = Path.home() / ".cache" / "opencode" / "models.json"
 
 def _skills_dir():
-    """OpenCode skills directory (env override, else standard user location)."""
     env = os.environ.get("OPENCODE_SKILLS_DIR")
     if env:
         return Path(env)
