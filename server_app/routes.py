@@ -1,5 +1,3 @@
-"""HTTP-facing API handlers (no static serving)."""
-
 import datetime
 import json
 import os
@@ -81,12 +79,6 @@ def api_projects():
 
 
 def api_graph(project, force=False):
-    """Serve the graphify knowledge graph (graphify-out/graph.json).
-
-    Nodes/links are optionally restricted to one project directory by
-    matching the node's source_file prefix. The JSON is cached by file
-    mtime so graphify rebuilds are picked up without a server restart.
-    """
     if not GRAPH_JSON.is_file():
         return {
             "ok": False,
@@ -221,5 +213,3 @@ def handle_api(path, query):
         return plugin_state()
 
     return None
-
-
