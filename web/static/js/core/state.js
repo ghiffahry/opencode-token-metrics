@@ -34,7 +34,6 @@ export var state = {
 };
 
 export var liveRangeCache = new Map();
-export var liveContextCache = new Map();
 export var liveBudgetCache = new Map();
 
 export var chartRegistry = { generation: null, api: null, usage: null, stages: null, realtime: null, sparks: {} };

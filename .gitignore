@@ -8,9 +8,6 @@ runtime/
 build/
 dist/
 
-# Staged web assets for wheel builds (setup.py stages repo assets here)
-server_app/web/
-
 # Local app config (auto-created, machine-specific)
 app/config.json
 

@@ -31,10 +31,10 @@ Source = "https://github.com/ghiffahry/token-metrics"
 token-metrics = "server_app.httpd:main"
 
 [tool.setuptools]
-packages = ["server_app"]
+packages = ["server_app", "server_app.overview", "web"]
 
 [tool.setuptools.dynamic]
 version = { attr = "server_app.config.VERSION" }
 
 [tool.setuptools.package-data]
-server_app = ["web/*", "web/static/**/*"]
+web = ["*.html", "static/**/*"]

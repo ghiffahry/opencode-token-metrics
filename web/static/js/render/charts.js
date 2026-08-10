@@ -3,14 +3,6 @@
 import { state, chartRegistry } from "../core/state.js";
 import { $, nf, icons, cssVar, formatTokens } from "../core/utils.js";
 
-export function chartDefaults() {
-  return {
-    color: cssVar("--text-secondary"),
-    borderColor: cssVar("--border"),
-    font: { family: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', size: 12 }
-  };
-}
-
 export function baseOptions() {
   return {
     responsive: true,

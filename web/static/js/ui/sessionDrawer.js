@@ -99,7 +99,7 @@ export function openSessionDrawer(session) {
     var el = ctx;
     if (el) el.scrollIntoView({ behavior: "smooth" });
     try {
-      import("../render/context.js").then(function (m) {
+      import("../render/context/index.js").then(function (m) {
         m.selectSessionInContext(session.id);
       });
     } catch (e) {}

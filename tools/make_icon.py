@@ -12,7 +12,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 ROOT = Path(__file__).resolve().parent.parent
-STATIC = ROOT / "static"
+STATIC = ROOT / "web" / "static"
 APP = ROOT / "app"
 
 INDIGO = (79, 70, 229)   # #4F46E5

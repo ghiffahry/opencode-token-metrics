@@ -1,6 +1,6 @@
 /* Live backend access: HTTP helpers, project list/filter, view assembly, polling. */
 
-import { state, liveRangeCache, liveContextCache, liveBudgetCache } from "../core/state.js";
+import { state, liveRangeCache, liveBudgetCache } from "../core/state.js";
 import { $, esc } from "../core/utils.js";
 import { weeklyGroup } from "../data/derive.js";
 import { renderKpis, renderSparks } from "../render/kpis.js";
@@ -8,7 +8,7 @@ import { renderEfficiency } from "../render/efficiency.js";
 import { renderBarCharts, renderUsageChart, renderStagesChart } from "../render/charts.js";
 import { renderModelTable, renderRequests, renderPerDay, renderSessionTable, renderRateLimits } from "../render/tables.js";
 import { renderLiveCounters } from "../render/realtime.js";
-import { renderContext, renderContextGrowth } from "../render/context.js";
+import { renderContext, renderContextGrowth } from "../render/context/index.js";
 import { renderBudget } from "../render/budget.js";
 import { updateChips } from "../ui/chips.js";
 
@@ -179,25 +179,6 @@ export function rangeTitle(project, view) {
   var label = projectLabel(project) + " · " + (view.rangeLabel || "");
   if (view.rangeDetail) label += " · " + view.rangeDetail;
   return label;
-}
-
-export function loadContextUsage(rangeKey) {
-  var cacheKey = [rangeKey, state.project || "", state.modelFilter || "all",
-                  state.customFrom || "", state.customTo || ""].join("|");
-  var cached = liveContextCache.get(cacheKey);
-  if (cached && Date.now() - cached.time < 15000) {
-    state.contextUsage = cached.data;
-    renderContext(state.contextUsage);
-    return Promise.resolve(cached.data);
-  }
-  return httpJson(apiUrl("/api/context_usage?range=" + rangeKey), 60000)
-    .then(function (d) {
-      liveContextCache.set(cacheKey, { time: Date.now(), data: d });
-      state.contextUsage = d;
-      renderContext(d);
-      return d;
-    })
-    .catch(function () {});
 }
 
 export function loadBudget() {

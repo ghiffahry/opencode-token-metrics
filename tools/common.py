@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SERVER_PY = ROOT / "server.py"
+SERVER_MODULE = "server_app.httpd"
 TOOLS_DIR = ROOT / "tools"
 RUNTIME_DIR = ROOT / "runtime"
 LOG_DIR = RUNTIME_DIR / "logs"
@@ -34,8 +34,8 @@ SKILLS_DIR = _skills_dir()
 
 
 def ensure_dirs():
-    LOG_DIR.mkdir(exist_ok=True)
-    EXPORT_DIR.mkdir(exist_ok=True)
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    EXPORT_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def read_pid():

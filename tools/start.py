@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Start the Token Metrics bridge (server.py) as a detached background process.
+"""Start the Token Metrics bridge as a detached background process.
 
 Usage:
   py tools/start.py            # default port 8124
@@ -33,7 +33,7 @@ def spawn(port, host):
     else:
         kwargs["start_new_session"] = True
     proc = subprocess.Popen(
-        [sys.executable, str(common.SERVER_PY), "--port", str(port), "--host", host],
+        [sys.executable, "-m", common.SERVER_MODULE, "--port", str(port), "--host", host],
         **kwargs
     )
     logf.close()

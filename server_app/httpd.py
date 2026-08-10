@@ -109,3 +109,5 @@ def main():
         srv.shutdown()
 
 
+if __name__ == "__main__":
+    main()

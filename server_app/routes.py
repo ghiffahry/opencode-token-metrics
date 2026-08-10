@@ -6,7 +6,7 @@ import os
 import time
 
 from .cache import _cache, cache_get_or
-from .config import (ACTIVE_WINDOW_MS, ANALYTICS_TZ, BASE_DIR,
+from .config import (ACTIVE_WINDOW_MS, ANALYTICS_TZ, DATA_ROOT,
                      DEFAULT_CONTEXT, GRAPH_JSON, GRAPH_VIEWS, MODELS_CACHE,
                      RANGES, RATE_LIMITS, RATE_LIMIT_SOURCES, VERSION, db_path)
 from .context import context_usage, daily_budget
@@ -114,7 +114,7 @@ def api_graph(project, force=False):
     links = raw[1]["links"]
     if project:
         proj = project.replace("\\", "/").rstrip("/").lower()
-        base = str(BASE_DIR).replace("\\", "/").rstrip("/").lower()
+        base = str(DATA_ROOT).replace("\\", "/").rstrip("/").lower()
         keep_all = proj == base or base.startswith(proj + "/")
         if not keep_all:
             proj_base = proj.rsplit("/", 1)[-1]

@@ -16,17 +16,24 @@ def _base_dir():
     """Web root for static dashboard assets.
 
     Resolution order:
-    1. PyInstaller onefile bundle -> extracted _MEIPASS dir.
-    2. Wheel install -> server_app/web/ (assets staged by setup.py).
-    3. Source checkout -> repo root (parent of the package directory).
+    1. PyInstaller bundle -> extracted _MEIPASS dir.
+    2. Python install -> the `web` package next to server_app (site-packages/web).
+    3. Source checkout -> repo `web/` directory.
     """
     pkg = Path(__file__).resolve().parent
     if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
         return Path(sys._MEIPASS)
-    staged = pkg / "web"
-    if (staged / "index.html").is_file():
-        return staged
+    folder = pkg.parent / "web"
+    if (folder / "index.html").is_file():
+        return folder
     return pkg.parent
+
+
+def _data_root():
+    """Repo root for runtime data (graphify-out); _MEIPASS when frozen."""
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        return Path(sys._MEIPASS)
+    return Path(__file__).resolve().parent.parent
 
 
 def log(msg):
@@ -51,8 +58,9 @@ def set_db_path(p):
     global DB_PATH
     DB_PATH = Path(p)
 MODELS_CACHE = Path.home() / ".cache" / "opencode" / "models.json"
-GRAPH_JSON = BASE_DIR / "graphify-out" / "graph.json"
-GRAPH_VIEWS = BASE_DIR / "graphify-out" / "views"
+DATA_ROOT = _data_root()
+GRAPH_JSON = DATA_ROOT / "graphify-out" / "graph.json"
+GRAPH_VIEWS = DATA_ROOT / "graphify-out" / "views"
 
 DEFAULT_CONTEXT = 200_000
 ACTIVE_WINDOW_MS = 5 * 60_000          # session "active" if updated within 5 min

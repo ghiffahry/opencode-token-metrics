@@ -16,9 +16,9 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Python syntax check (server_app, tools, app)
+      - name: Python syntax check (server_app, tools, app, web)
         run: |
-          python -m compileall -q server_app tools app server.py
+          python -m compileall -q server_app tools app web
           echo "python ok"
 
       - name: Python unit tests (server_app)

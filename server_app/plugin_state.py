@@ -29,7 +29,7 @@ def plugin_state():
     if not path.is_file():
         return {"ok": True, "exists": False, "path": str(path)}
     mtime = path.stat().st_mtime
-    key = "plugin_state:%s" % mtime
+    key = "plugin_state:%s:%s" % (path, mtime)
     cached = _cache.get(key)
     if cached and cached[0] > time.time():
         payload = cached[1]

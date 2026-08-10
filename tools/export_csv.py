@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """Export opencode aggregates to CSV from the CLI (no browser needed).
 
-Reads the database directly (same read-only queries as server.py), so the
+Reads the database directly (same read-only queries as server_app), so the
 bridge does not need to be running.
 
 Usage:
@@ -18,7 +18,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-import server  # noqa: E402
+from server_app.config import RANGES  # noqa: E402
+from server_app.overview import models, overview, requests_list  # noqa: E402
 
 
 def write(path, rows):
@@ -31,7 +32,7 @@ def write(path, rows):
 
 def main():
     ap = argparse.ArgumentParser(description="Export opencode aggregates to CSV")
-    ap.add_argument("--range", default="7d", choices=sorted(server.RANGES))
+    ap.add_argument("--range", default="7d", choices=sorted(RANGES))
     ap.add_argument("--project", default=None, help="filter by session directory")
     ap.add_argument("--out", default="runtime/exports")
     args = ap.parse_args()
@@ -40,7 +41,7 @@ def main():
     rng = args.range
     proj = args.project
 
-    ov = server.overview(rng, proj)
+    ov = overview(rng, proj)
     write(out / ("overview_%s.csv" % rng), [
         ["key", "value"],
         ["range", ov["range"]],
@@ -67,7 +68,7 @@ def main():
         [s["name"], s["input"], s["output"]] for s in ov["stages"]
     ])
 
-    md = server.models(rng, proj)
+    md = models(rng, proj)
     write(out / ("models_%s.csv" % rng), [
         ["id", "requests", "input", "output", "cache_read", "reasoning",
          "errors", "success", "success_rate", "latency_ms", "status",
@@ -80,7 +81,7 @@ def main():
         for m in md["models"]
     ])
 
-    rr = server.requests_list(200, proj)
+    rr = requests_list(200, proj)
     write(out / ("requests_%s.csv" % rng), [
         ["id", "model", "agent", "input", "output", "total", "latency_ms",
          "status", "time"],

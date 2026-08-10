@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """Token Metrics desktop app (pywebview + embedded loopback server).
 
-Runs the server.py bridge inside this process on a private 127.0.0.1 port
+Runs the bridge inside this process on a private 127.0.0.1 port
 and opens a native window (Microsoft Edge WebView2 via pywebview).
 No browser tab, no exposed server: only a loopback port that the desktop
 window talks to.
@@ -24,7 +24,8 @@ else:
     ROOT = Path(__file__).resolve().parent
     sys.path.insert(0, str(ROOT.parent))
 
-import server
+from server_app.config import db_path, log, set_db_path
+from server_app.httpd import make_server
 
 APP_NAME = "Token Metrics"
 CONFIG_PATH = ROOT / "config.json"
@@ -46,7 +47,7 @@ def load_config():
         if CONFIG_PATH.is_file():
             cfg.update(json.loads(CONFIG_PATH.read_text(encoding="utf-8")))
     except Exception as e:
-        server.log("config error (%s): %s" % (CONFIG_PATH, e))
+        log("config error (%s): %s" % (CONFIG_PATH, e))
     return cfg
 
 
@@ -76,22 +77,22 @@ def main():
 
     db_path = (cfg.get("dbPath") or "").strip()
     if db_path:
-        server.set_db_path(db_path)
-    if not server.db_path().exists():
-        server.log("WARNING: opencode database not found: %s" % server.db_path())
+        set_db_path(db_path)
+    if not db_path().exists():
+        log("WARNING: opencode database not found: %s" % db_path())
 
-    srv, port = server.make_server(cfg.get("host", "127.0.0.1"), int(cfg.get("port", 0)))
+    srv, port = make_server(cfg.get("host", "127.0.0.1"), int(cfg.get("port", 0)))
     thread = threading.Thread(target=srv.serve_forever, daemon=True)
     thread.start()
 
     try:
         import webview
     except ImportError:
-        server.log("pywebview is not installed. Install it with: py -m pip install pywebview")
+        log("pywebview is not installed. Install it with: py -m pip install pywebview")
         sys.exit(1)
 
     url = "http://127.0.0.1:%d/" % port
-    server.log("Opening desktop window -> %s (config: %s)" % (url, CONFIG_PATH))
+    log("Opening desktop window -> %s (config: %s)" % (url, CONFIG_PATH))
 
     try:
         webview.create_window(
@@ -103,15 +104,15 @@ def main():
         )
         webview.start(icon=icon_path())
     except Exception as e:
-        server.log("Failed to open desktop window: %s" % e)
+        log("Failed to open desktop window: %s" % e)
         if "WebView2" in str(e):
-            server.log(
+            log(
                 "The Microsoft Edge WebView2 runtime is required (preinstalled on most "
                 "Windows 10/11). Install it from https://developer.microsoft.com/microsoft-edge/webview2/"
             )
         sys.exit(1)
     finally:
-        server.log("Closing server.")
+        log("Closing server.")
         srv.shutdown()
 
 

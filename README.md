@@ -1,282 +1,228 @@
-# Token Metrics - OpenCode API Usage Dashboard
+<div align="center">
 
-Desktop dashboard for **opencode** API token usage, rate limits, model context, and session activity. All data is read live from your real `opencode.db`; no mock data, no exposed server.
+# Token Metrics
 
-- **Desktop app (main path)** - `py app/desktop.py` opens a native window (Edge WebView2 via `pywebview`) backed by an embedded loopback server on a random `127.0.0.1` port. Only the window can reach it; no browser tab, no fixed port.
-- **Dev server** - `py server.py` serves the same dashboard + API at `http://127.0.0.1:8124/` for development.
+**Dashboard pemantau token API opencode, dari database lokal menjadi panel metrik yang siap dikaji.**
 
-```
-dashboard-token/
-├── app/                     # Desktop app (pywebview window + embedded server)
-│   ├── desktop.py           #   Desktop entry: embedded server + pywebview window
-│   ├── desktop.pyw          #   Double-click launcher (no console window)
-│   ├── TokenMetrics.bat     #   Desktop launcher (starts desktop.pyw)
-│   ├── config.json          #   Desktop config (dbPath, window size, port) - auto-created
-│   └── app.ico              #   Window / exe icon
-├── index.html               # Dashboard markup (loads static/js/main.js as an ES module)
-├── server.py                # Local API bridge (thin shim; logic lives in server_app/)
-├── server_app/              # Bridge package: config, db, ranges, estimates, overview, context, routes, httpd
-├── static/
-│   ├── css/
-│   │   ├── base.css         # Theme tokens, reset & base
-│   │   ├── layout.css       # App layout, sidebar, topbar
-│   │   ├── components.css   # Buttons, cards, tables, badges, footer, toast, ...
-│   │   ├── responsive.css   # Media queries & reduced motion
-│   │   └── widgets.css      # Context-usage widget, token quota, custom range picker
-│   ├── favicon.svg          # Dashboard favicon
-│   ├── vendor/              # Offline copies of Chart.js, lucide, vis-network (no CDN)
-│   └── js/
-│       ├── main.js          # Entry point
-│       ├── core/            # utils, state
-│       ├── data/            # derive (metric computations), csv (exports)
-│       ├── render/          # kpis, efficiency, tables, charts, realtime, graph
-│       ├── live/            # api (fetch), manager (polling)
-│       └── app/             # render (orchestration), controls, init
-├── tools/                   # Helper scripts (see table below)
-├── runtime/                 # Generated logs, exports, build, and dist artifacts
-├── graphify-out/            # Knowledge graph (graph.json + views), updated by graphify
-├── opencode/                # opencode plugin package (opencode-token-metrics)
-│   ├── plugins/token-metrics.js   #   Realtime usage + quota monitor (see Plugin section)
-│   ├── package.json               #   npm package metadata (publishable)
-│   └── README.md                  #   Plugin docs (install, env vars, tool)
-├── opencode.json            # Local opencode config: enables ./opencode/plugins/token-metrics.js
-└── README.md                # This guide
-```
+![Python](https://img.shields.io/badge/python-%3E%3D3.8-brightgreen)
+![UI](https://img.shields.io/badge/ui-pywebview%20%7C%20Edge%20WebView2-blue)
+![Status](https://img.shields.io/badge/status-active--development-orange)
+![Data](https://img.shields.io/badge/data-opencode.db%20read--only-purple)
 
-The frontend is split into ES modules; the old single-file `script.js` has been removed. Because the project filter is backed by server endpoints, the dashboard is served from the same origin as the API - in the desktop app the API base is derived from `window.location`, so any port works automatically.
+</div>
 
-## Helper scripts
+---
 
-```bash
-py tools/start.py            # Start server.py detached; writes logs/server.pid
-py tools/stop.py             # Stop the running server (PID file, else port lookup)
-py tools/db_stats.py         # OpenCode database overview (counts, sizes, ranges)
-py tools/export_csv.py       # CSV exports of requests/models per range into exports/
-py tools/context_map.py      # Model -> context-window map (overrides + cache)
-py tools/schema_report.py    # OpenCode DB schema (tables, columns, indexes)
-py tools/skill_install.py    # Install the graphify CLI + OpenCode skill (idempotent)
-py tools/graph_views.py      # Regenerate graphify-out/views (tree / callflow / graph HTML)
-py tools/build_desktop.py    # Build the desktop app with PyInstaller (add --build to run)
+## Tentang Proyek Ini
+
+Pengguna opencode bebas memakai token API sampai batas kuota free tier, tapi berapa sisa kuota, berapa context window yang terpakai, dan sesi mana yang paling boros biasanya baru terasa saat sudah kena limit. Token Metrics menjawab tiga pertanyaan itu secara langsung dari database opencode yang asli.
+
+Cara kerjanya sederhana. Server kecil membaca database lokal, menghitung agregat per rentang waktu, lalu menyajikannya sebagai dashboard desktop atau halaman pengembangan. Tidak ada data tiruan, tidak ada database replika, dan tidak ada server yang terbuka ke publik. Angka yang tidak bisa dihitung dari database ditandai jelas sebagai estimasi, bukan disamarkan menjadi angka pasti.
+
+Pembeda proyek ini dari sekadar "membuka database" adalah lapisan keamanan data. Database dibuka read-only dengan mode WAL-safe, tidak pernah ditulis, dan setiap asumsi perhitungan didokumentasikan di dalam respons API itu sendiri.
+
+---
+
+## Arsitektur
+
+```text
+app/                     Desktop app (pywebview + server loopback tertanam)
+  desktop.py             Entry desktop: server tertanam + jendela native
+  desktop.pyw            Launcher tanpa console window (double-click)
+  config.json            Konfigurasi desktop (dbPath, ukuran window, port), auto-dibuat
+server_app/              Package backend: config, db, ranges, estimates, context, routes, httpd
+  overview/              Penghitung agregat per rentang (models, sessions, requests, realtime, _empty)
+web/                     Frontend, halaman dan aset statis
+  index.html             Markup dashboard (memuat js/main.js sebagai ES module)
+  static/                css/, vendor/, dan js/ (core, data, render, live, app, ui)
+tools/                   Script pendukung (start, stop, db_stats, git_commit, build_desktop, ...)
+tests/                   Unit test (pytest)
+opencode/                Plugin opencode (npm package opencode-token-metrics)
+runtime/                 Hasil runtime (log, export, build, dist), di-ignore Git
+graphify-out/            Knowledge graph codebase (graph.json + views), di-ignore Git
 ```
 
 ---
 
-## Quick start
+## Alur Kerja
 
-### 1. Run the desktop app
+1. Desktop app atau dev server menjalankan server HTTP loopback di `127.0.0.1`.
+2. Server membuka `opencode.db` asli dengan koneksi read-only yang aman untuk WAL.
+3. Agregator menghitung metrik per rentang: `today`, `7d`, `30d`, `90d`, `24h`, dan `custom`.
+4. Frontend ES module merender panel: KPI, grafik, tabel model, request, sesi, dan context usage.
+5. Polling realtime memperbarui sesi aktif dan penghitung token sekitar tiap 4 detik selama tab terlihat.
+6. Plugin `opencode-token-metrics` menangkap event pemakaian saat terjadi dan menulis `state.json`.
+7. Dashboard membaca `state.json` tersebut lewat `/api/plugin_state` dan menampilkannya di status strip.
+8. Bila server tidak terjangkau, dashboard menampilkan banner peringatan, bukan data palsu.
 
-Requires Python 3.8+ and `pywebview` (one-time: `py -m pip install pywebview`). The Microsoft Edge WebView2 runtime is preinstalled on most Windows 10/11 machines.
+---
+
+## Instalasi
+
+Prasyarat: Python 3.8 ke atas, Microsoft Edge WebView2 runtime (sudah terpasang pada kebanyakan Windows 10/11), dan database opencode di lokasi bawaan (`~/.local/share/opencode/opencode.db`).
 
 ```bash
-cd dashboard-token   # where you cloned this repo
-py app\desktop.py
+py -m pip install -e ".[desktop]"
 ```
 
-Double-click `app\desktop.pyw` (or `app\TokenMetrics.bat`) to start it without a console window.
+Setelah itu jalankan salah satu dari dua jalur berikut.
 
-The window is backed by an embedded loopback server bound to a random free `127.0.0.1` port - nothing is exposed and no other browser tab can reach it. `app\config.json` is created on first run next to `desktop.py`:
+```bash
+# Desktop app (jalur utama)
+py app\desktop.py
+
+# Dev server (pengembangan)
+py -m server_app.httpd
+```
+
+Desktop app membuka jendela native yang hanya bisa dijangkau oleh window itu sendiri, tanpa port tetap dan tanpa tab browser lain. Dev server melayani dashboard dan API yang sama di `http://127.0.0.1:8124/`. Jalankan `py -m server_app.httpd --port 9000 --db <path>` bila perlu menyesuaikan port atau lokasi database. Shortcut `Token Metrics.cmd` di root repo membuka desktop app.
+
+---
+
+## Konfigurasi
+
+Tidak ada file `.env`. Konfigurasi lewat dua tempat: `app/config.json` untuk desktop, dan environment variable untuk server.
+
+**Desktop (`app/config.json`)** dibuat otomatis pada run pertama:
 
 ```json
 {
   "dbPath": "",        // "" -> ~/.local/share/opencode/opencode.db
   "host": "127.0.0.1",
-  "port": 0,           // 0 -> OS picks a free port
+  "port": 0,           // 0 -> OS memilih port bebas
   "width": 1440,
-  "height": 900,
-  "minWidth": 980,
-  "minHeight": 640
+  "height": 900
 }
 ```
 
-Set `dbPath` if your opencode database lives elsewhere.
+**Environment variable** (dibaca server saat start):
 
-### 2. Build a standalone exe (optional)
-
-```bash
-py -m pip install pyinstaller pywebview
-py tools/build_desktop.py --build
-# -> runtime/dist/TokenMetrics/TokenMetrics.exe  (windowed, self-contained folder)
-```
-
-### 3. Dev server (optional)
-
-The same dashboard + API is served at `http://127.0.0.1:8124/` for development:
-
-```bash
-py server.py
-# -> Serving dashboard + API at http://127.0.0.1:8124/
-```
-
-Optional flags:
-
-```bash
-py server.py --port 9000        # different port
-py server.py --host 0.0.0.0     # bind other interfaces (default 127.0.0.1)
-py server.py --db <path>        # override database path
-```
-
-### 4. Start the dev server detached (PowerShell)
-
-The dev server must keep running; starting it as a background job inside a shell that later exits will kill it. Use `Start-Process` to detach, or simply use the bundled tool:
-
-```powershell
-py tools/start.py
-# ... and later:
-py tools/stop.py
-```
-
-Manual equivalent:
-
-```powershell
-Start-Process py -ArgumentList "server.py","--port","8124" `
-  -WorkingDirectory (Get-Location) -WindowStyle Hidden
-```
-
-Stop it with:
-
-```powershell
-Get-Process -Name python | Stop-Process -Force
-```
-
-The last chosen project is remembered (`localStorage.project`). If the server is unreachable the dashboard shows a warning banner (3 failed polls → toast) instead of fake data.
-
----
-
-## What the dashboard shows
-
-All metrics are computed from the real opencode database and are **estimates** unless noted:
-
-| Metric | Meaning |
-| --- | --- |
-| Requests | `assistant` messages that carry a `modelID` (i.e. one model API call per message) |
-| Tokens in / out | Sum of `tokens.input` / `tokens.output` across messages |
-| Latency | `message.time.completed − time.created` (duration of the model call) |
-| Errors | Failed tool calls (`part.state.status = 'error'`) plus `type='error'` parts |
-| Context | Largest single-request context window used vs. the model's context limit |
-| Realtime | Session/counts updated every ~4 s while the dashboard tab is visible |
-
-A `notes` object inside every `/api/overview` response documents these assumptions in detail.
-
----
-
-## API endpoints
-
-Base URL: `http://127.0.0.1:8124` (dev server; the desktop app uses a random port - the frontend derives it from `window.location`, so no configuration is needed).
-
-| Endpoint | Description |
-| --- | --- |
-| `GET /api/health` | Server + database health (`dbExists`, `dbSize`) |
-| `GET /api/meta` | Server version, ranges, rate limits, context defaults |
-| `GET /api/context` | Model → context-window map (`models`, `default`) |
-| `GET /api/projects` | Real project directories found in the database |
-| `GET /api/overview?range=7d` | Aggregates: requests, tokens, latency, success rate, stages, daily buckets, rate limits |
-| `GET /api/models?range=7d` | Per-model aggregation incl. `contextLimit` / `contextUsed` |
-| `GET /api/context_usage?range=7d` | Context window usage: latest request (input/cached/output/reasoning vs limit), peak, per-model/session/agent aggregates, recent requests, estimated composition of the latest request |
-| `GET /api/budget` | Token Quota: estimated quota window usage (`window`: limit, hours, anchor hour, burn rate, projection, exhaustion ETA, reset time, hourly `series`) + calendar-day `today` and 14-day `history` |
-| `GET /api/sessions?limit=50` | Session list (id, title, model, tokens, status, latency) |
-| `GET /api/requests?limit=60` | Latest requests (id, model, agent, tokens, latency, status, time) |
-| `GET /api/realtime` | Watermark + active sessions, RPM/TPM (last 1 min), quota-window requests/tokens |
-| `GET /api/plugin_state` | Live state captured by the `opencode-token-metrics` plugin (`state.json`), if present: quota-window summary, session/message counts, status (`exists: false` when the plugin has not written yet) |
-| `GET /api/graph` | Knowledge graph from `graphify-out/graph.json` (see Knowledge Graph section below) |
-
-`range` values: `today`, `7d`, `30d`, `90d` (calendar ranges, default `today`), `24h` (rolling window: now − 24 h), and `custom` (requires `from=YYYY-MM-DD&to=YYYY-MM-DD`, both inclusive; dates are clamped to today). Calendar boundaries use `TOKENMETRICS_TZ` (default: system local timezone; set it to pin an IANA zone such as `Asia/Jakarta`); the database itself stays UTC epoch ms.
-
-**Project filter:** `overview`, `models`, `sessions`, `requests`, and `realtime` accept `?project=<directory>` (URL-encoded) to restrict results to a single project directory, e.g. `GET /api/overview?project=C:/Users/you/projects/my-app`. Use `GET /api/projects` to list valid values.
-
-**Context usage:** `tokens.total == input + output + reasoning + cache.read` in the database, but no per-category attribution is stored, so the composition breakdown is an explicit **estimated** heuristic (splits only the real input total of the latest request across categories read from the workspace files; it never invents tokens). Everything else (window utilisation, peaks, aggregates) is actuals from the database.
-
-**Token quota (Free-Tier Quota):** the opencode free tier grants roughly 2.5M tokens per ~14 h reset window; the dashboard models it as an estimated sliding window anchored at `QUOTA_ANCHOR_HOUR` (default 04:00 local, so the shift never happens at your off-midnight usage of the window; the anchor choice only changes where the reset lands). `TOKENMETRICS_QUOTA_TOKENS` (tokens per window) and `TOKENMETRICS_QUOTA_WINDOW_HOURS` pin the values (labelled `configured`); unset, defaults `2_500_000` / `14` are used and labelled `default`. The window is **estimated**: the reset is never claimed to be exact provider timing. Percentages are raw (not clamped to 100%). Status tiers (HEALTHY / WATCH / HIGH / CRITICAL / EXHAUSTION RISK) are dashboard interpretation thresholds on projected usage at reset, not provider rules. Calendar-day usage stays separate (`today` / `history`).
-
-Responses are JSON, cached briefly server-side (overview 3 s, models 5 s, sessions/requests 2 s, realtime 1.5 s).
-
-### Knowledge Graph section
-
-The dashboard sidebar has a **Knowledge Graph** section that visualizes the codebase as an interactive mind-map backed by `graphify-out/graph.json` (kept fresh with `graphify update .`). Four views:
-
-| View | Implementation |
-| --- | --- |
-| Graph | Native vis-network graph, nodes colored by graphify community (files = boxes) |
-| Folders | Same graph aggregated by directory (`dir:` nodes), edge weights + relation summaries |
-| File tree | Iframe to `graphify-out/views/tree.html` (`graphify tree`) |
-| Call flow | Iframe to `graphify-out/views/callflow.html` (`graphify export callflow-html`) |
-
-- The chosen view persists in `localStorage.graphView`; the graph re-renders on project change, refresh, and theme toggle.
-- Regenerate the three HTML views after a graph rebuild with `py tools/graph_views.py`.
-- `GET /api/graph?project=<dir>&refresh=1` returns `{ok, directed, mtime, nodes, links, views}`. The project filter keeps nodes whose `source_file` matches the repo root (any project inside it shows the whole graph) or the directory basename; unrelated projects return `0` nodes and the dashboard shows a "No matching nodes" hint. `refresh=1` bypasses the mtime cache.
-
----
-
-## Configuration
-
-**Desktop (`app\config.json`)** - created automatically next to `desktop.py` on first run: `dbPath` (default `~/.local/share/opencode/opencode.db`), `host`/`port` (default `127.0.0.1` / `0` = random free port), `width`/`height`/`minWidth`/`minHeight`.
-
-**Dev server (`server.py`)** - constants live at the top of `server_app/config.py`:
-
-| Constant | Default | Purpose |
+| Variable | Default | Fungsi |
 | --- | --- | --- |
-| `PORT` / `HOST` | `8124` / `127.0.0.1` | Listen address (also `--port` / `--host`) |
-| `DB_PATH` | `~/.local/share/opencode/opencode.db` | Real opencode database (read-only connection, WAL-safe) |
-| `MODELS_CACHE` | `~/.cache/opencode/models.json` | Models.dev cache used for context-window limits |
-| `MODEL_CONTEXT_OVERRIDES` | `ollama/qwen2.5-coder:7b` | Context limits for models missing from the models.dev cache (e.g. local ollama models) - add your own here |
-| `DEFAULT_CONTEXT` | `200_000` | Fallback context limit when a model is unknown |
-| `ACTIVE_WINDOW_MS` | `5 * 60_000` | Session counts as *active* if updated within 5 minutes |
-| `TOKENMETRICS_RPM`, `TOKENMETRICS_TPM`, `TOKENMETRICS_RPD`, `TOKENMETRICS_DTP` | unset (falls back to estimates) | Verified quotas. OpenCode's local DB does not expose provider/account limits, so unset values use community estimates (`60` / `250000` / `200` / `2500000`, editable in `RATE_LIMIT_DEFAULTS`) and are labelled `Estimated default`; set a `TOKENMETRICS_*` env var to pin a verified limit (labelled `configured`). RPD/DTP track the estimated quota window, not a calendar day |
-| `TOKENMETRICS_TZ` | system local time (unset) | Timezone for calendar day boundaries (`today`, per-day buckets, quota-window anchor). Set an IANA name to pin it (e.g. `Asia/Jakarta`). Requires Python 3.9+ (`zoneinfo`); older Pythons fall back to local time |
-| `TOKENMETRICS_QUOTA_TOKENS` | `2_500_000` (`QUOTA_LIMIT_DEFAULT`) | Free-tier token quota per reset window for the Token Quota section; `configured` when set, otherwise `default` |
-| `TOKENMETRICS_QUOTA_WINDOW_HOURS` | `14` (`QUOTA_WINDOW_HOURS`) | Estimated reset-window length for the Token Quota section |
-| `QUOTA_ANCHOR_HOUR` | `4` | Local hour the estimated 14 h window starts on (reset lands at `anchor + 14h`; set to change where the reset lands) |
-| `TOKENMETRICS_REQUEST_QUOTA` | `200` (`REQUEST_QUOTA_DEFAULT`) | Estimated request budget per quota window |
-| `RANGES` | `today/7d/30d/90d` (+ `24h`, `custom`) | Aggregation windows and bucket counts |
+| `TOKENMETRICS_TZ` | zona lokal sistem | Batas kalender harian; set IANA zone untuk pin, mis. `Asia/Jakarta` |
+| `TOKENMETRICS_RPM` / `TOKENMETRICS_TPM` | `60` / `250000` (estimasi) | Kuota requests per menit dan tokens per menit terverifikasi |
+| `TOKENMETRICS_RPD` / `TOKENMETRICS_DTP` | `200` / `2500000` (estimasi) | Kuota per jendela reset free tier |
+| `TOKENMETRICS_QUOTA_TOKENS` | `2500000` | Token per jendela quota; UI menampilkan label `configured` bila di-set |
+| `TOKENMETRICS_QUOTA_WINDOW_HOURS` | `14` | Panjang jendela reset estimasi |
+| `QUOTA_ANCHOR_HOUR` | `4` | Jam lokal awal jendela 14 jam, mengatur jatuhnya waktu reset |
+| `TOKENMETRICS_REQUEST_QUOTA` | `200` | Estimasi budget request per jendela quota |
 
-KPI deltas and the efficiency baseline are computed from the immediately-prior window of the same length (`_prev_overview`), never from hardcoded constants.
+Nilai tanpa environment variable memakai estimasi komunitas dan diberi label `default` atau `estimated` di UI. Kapan pun angka berasal dari sumber pasti, label berubah menjadi `configured`.
 
 ---
 
-## Plugin (opencode-token-metrics)
+## Penggunaan
 
-`opencode/` is a small opencode plugin that captures live token usage from opencode events (as they happen, alongside the dashboard's DB polling) and writes a `state.json` (default `~/.local/share/token-metrics/state.json`). It exposes a `token_metrics` tool that returns the current window status, per-session breakdown, and the state file path. Details, install steps and env vars: see `opencode/README.md`.
+```bash
+py app\desktop.py                 # Jalankan desktop app
+py -m server_app.httpd            # Jalankan dev server di 127.0.0.1:8124
+py tools/start.py                 # Start server terpisah (detached), tulis logs/server.pid
+py tools/stop.py                  # Stop server yang berjalan
+py tools/db_stats.py       # Ringkasan database opencode (jumlah, ukuran, rentang)
+py tools/export_csv.py     # Ekspor request/model per rentang ke exports/
+py tools/git_commit.py     # Stage + commit helper (conventional commits)
+py tools/build_desktop.py --build   # Bangun exe desktop (PyInstaller)
+pytest tests               # 24 unit test: ranges, estimates, plugin_state
+```
 
-The repo's `opencode.json` already registers `./opencode/plugins/token-metrics.js`, so if you run opencode inside this repo the plugin is active automatically (restart opencode after changing it). To use the plugin in another project: `npm i opencode-token-metrics` (if published) and add it to that project's `plugin` list, or pass the local path.
+Rentang yang didukung: `today`, `7d`, `30d`, `90d`, `24h`, dan `custom` (`from=YYYY-MM-DD&to=YYYY-MM-DD`, inklusif dan dibatasi sampai hari ini). Sebagian endpoint menerima filter `?project=<directory>` untuk membatasi hasil ke satu project.
 
-The dashboard reads the plugin's `state.json` via `GET /api/plugin_state` and shows a "Plugin (state.json)" item in the status strip; the item stays hidden until the plugin has written a state file.
+---
+
+## Struktur Dashboard
+
+Etiket di bawah adalah bagian yang dimuat frontend dari payload `/api/overview` dan `/api/context_usage`.
+
+```text
+Overview             KPI (requests, token, latency, error rate) + perbandingan window sebelumnya
+Charts               Bucket harian, stages, perbandingan model
+Tables               Model, requests, sessions, rate limits
+Context Window       Utilisasi request terbaru vs limit, komposisi estimasi, peak
+Conversation Growth  Grafik pertumbuhan context per sesi
+Token Quota          Jendela quota estimasi: burn rate, proyeksi reset, riwayat 14 hari
+Realtime             Sesi aktif + R/TPM menit terakhir, diperbarui tiap ~4 detik
+Knowledge Graph      Visualisasi codebase via graphify (lihat bagian Ekstensi)
+```
+
+Bila database tidak ditemukan, server tetap merespons dengan payload kosong berisi nol, dan UI menampilkan state kosong. Tidak ada data karangan.
+
+---
+
+## Kualitas & Konsistensi Data
+
+Setiap agregat dinilai konsistensinya lewat satu prinsip: semua angka berasal dari database yang sama, dan semua asumsi ditulis di atas kertas.
+
+- Database dibuka read-only dan WAL-safe, tidak pernah ditulis.
+- Metrik `requests` = pesan `assistant` yang membawa `modelID` (satu panggilan API per pesan).
+- `latency` dihitung dari durasi `completed - created` sebuah pesan, bukan dari log server.
+- `errors` = tool call gagal (`part.state.status = 'error'`) ditambah part bertipe `error`.
+- Komposisi context adalah heuristic estimasi eksplisit: hanya memecah total input nyata, tidak pernah mengarang token.
+- Setiap respons `/api/overview` membawa objek `notes` yang mendokumentasikan asumsi tersebut.
+- Cache server bersifat pendek (overview 3 s, models 5 s, realtime 1.5 s), sehingga data cepat segar.
+
+Skor kelulusan proyek ini adalah jujur tentang ketidakpastian: angka estimasi ditandai, angka aktual tidak dicampurkan, dan jendela quota tidak pernah diklaim sebagai waktu reset resmi penyedia.
+
+---
+
+## Sumber Data: Database vs Event Langsung
+
+| Sumber | Kapan dipakai | Catatan |
+| --- | --- | --- |
+| `opencode.db` | Selalu; polling dan agregat | Histori lengkap, read-only, cocok untuk rentang panjang dan tabel |
+| Plugin `opencode-token-metrics` | Saat plugin aktif menulis `state.json` | Event realtime dari sesi opencode, status kuota per jendela |
+
+Plugin menangkap event pemakaian sesaat terjadi dan menyimpan `state.json` (default `~/.local/share/token-metrics/state.json`). Dashboard membacanya lewat `GET /api/plugin_state` dan menampilkan ringkasan di status strip; item tetap tersembunyi sampai plugin menulis file pertama. Detail instalasi dan environment variable plugin ada di `opencode/README.md`.
+
+---
+
+## API Ringkas
+
+Base URL: `http://127.0.0.1:8124` (desktop app memakai port acak, frontend menurunkannya dari `window.location`).
+
+| Endpoint | Deskripsi |
+| --- | --- |
+| `GET /api/health` | Kesehatan server dan database (`dbExists`, `dbSize`) |
+| `GET /api/overview?range=7d` | Agregat utama: requests, token, latency, stages, buckets harian, rate limits |
+| `GET /api/models?range=7d` | Agregat per model, termasuk `contextLimit` dan `contextUsed` |
+| `GET /api/context_usage?range=7d` | Context window: request terbaru, peak, agregat per model/sesi/agent, komposisi estimasi |
+| `GET /api/budget` | Token Quota: jendela estimasi, burn rate, proyeksi reset, riwayat 14 hari |
+| `GET /api/sessions?limit=50` | Daftar sesi (id, title, model, token, status, latency) |
+| `GET /api/requests?limit=60` | Request terbaru (model, agent, token, latency, status) |
+| `GET /api/realtime` | Watermark, sesi aktif, R/TPM menit terakhir, kuota jendela |
+| `GET /api/plugin_state` | State.json plugin bila ada (`exists: false` bila belum ditulis) |
+| `GET /api/graph` | Knowledge graph dari `graphify-out/graph.json` |
+
+---
+
+## Ekstensi: Knowledge Graph
+
+Folder `obsidian/` pada proyek AJA adalah tempat catatan pengetahuan; pada proyek ini perannya dipegang oleh knowledge graph. Repo terhubung dengan [graphify](https://github.com/Graphify-Labs/graphify): `graphify-out/graph.json` memetakan codebase sebagai graf interaktif, dan dashboard menyajikannya dalam empat tampilan (graph, folder, file tree, call flow).
+
+```bash
+py tools/skill_install.py      # Install CLI + skill graphify (idempotent)
+graphify update .              # Refresh inkremental setelah edit
+py tools/graph_views.py        # Regenerate tampilan HTML (tree / callflow)
+```
+
+Graph hanya menampilkan node project yang relevan dengan filter aktif; project lain mengembalikan 0 node, bukan graf yang melenceng.
 
 ---
 
 ## Troubleshooting
 
-| Symptom | Fix |
+| Gejala | Perbaikan |
 | --- | --- |
-| Desktop window opens but shows "Graph unreachable" / API errors | Check the DB exists and is readable; set `dbPath` in `app\config.json` if your opencode database is elsewhere. |
-| Desktop window fails with a WebView2 error | Install the Microsoft Edge WebView2 runtime (https://developer.microsoft.com/microsoft-edge/webview2/). |
-| `pywebview` import error | `py -m pip install pywebview`. |
-| "Server unreachable" banner | The embedded/dev server is down. Restart the app, or for the dev server run `py server.py`. |
-| Wrong context limits for a model | Add the model id to `MODEL_CONTEXT_OVERRIDES` in `server_app/config.py` and restart. |
-| Counts look small / zero | The current opencode user likely has few or no assistant messages in the selected range - try `90d`. |
-| Port 8124 already in use | Pick another port with `--port`. |
-| Graph section empty | Run `graphify update .` (or `graphify extract . --code-only`) and press Refresh in the dashboard. |
+| Jendela terbuka tapi API error | Cek database ada dan terbaca; set `dbPath` di `app/config.json` bila lokasi berbeda |
+| Error WebView2 | Install Microsoft Edge WebView2 runtime |
+| `pywebview` import error | `py -m pip install pywebview` |
+| Banner "Server unreachable" | Server tertanam/dev mati; restart app, atau `py -m server_app.httpd` |
+| Context limit model salah | Tambah id model ke `MODEL_CONTEXT_OVERRIDES` di `server_app/config.py` |
+| Angka kecil atau nol | Pengguna opencode saat ini sedikit pesan `assistant`; coba rentang `90d` |
+| Port 8124 dipakai | Pilih port lain dengan `--port` |
+| Section Graph kosong | Jalankan `graphify update .` lalu tekan Refresh di dashboard |
 
 ---
 
-## Graphify (knowledge graph)
+## Lisensi
 
-This repo is wired up for [graphify](https://github.com/Graphify-Labs/graphify): a knowledge graph of the codebase is kept in `graphify-out/` and consulted (and kept up to date) automatically by the opencode integration.
-
-```bash
-py tools/skill_install.py   # idempotent: installs CLI + skill, registers opencode hooks
-```
-
-What it does:
-
-1. Ensures the CLI is available - `uv tool install graphifyy` (falls back to `pipx`, then `pip --user`).
-2. Copies the OpenCode skill (`SKILL.md` + `references/`) into `SKILLS_DIR/graphify` (default `~/.config/opencode/skills`; override with the `OPENCODE_SKILLS_DIR` env var).
-3. Runs `graphify opencode install`, which adds a section to `AGENTS.md` and registers a `.opencode/plugins/graphify.js` `tool.execute.before` hook + plugin entry in `.opencode/opencode.json`.
-
-Useful commands:
-
-```bash
-graphify extract . --code-only   # build graphify-out/ with local AST only (no API cost)
-graphify update .                # incremental refresh after edits
-graphify query "<question>"      # scoped subgraph answer to a codebase question
-graphify path "A" "B"            # shortest path between two nodes
-graphify explain "X"             # plain-language explanation of a node
-```
+MIT. Lihat file `LICENSE`.

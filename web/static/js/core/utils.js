@@ -2,16 +2,6 @@
 
 export var nf = new Intl.NumberFormat("en-US");
 
-export function mulberry32(a) {
-  return function () {
-    a |= 0;
-    a = (a + 0x6d2b79f5) | 0;
-    var t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
 export function round(x) { return Math.round(x); }
 
 export function trim(x) {
@@ -34,10 +24,6 @@ export function formatLatency(ms) {
 
 export function formatTime(d) {
   return d.toLocaleTimeString("en-US", { hour12: false });
-}
-
-export function formatShortDate(d) {
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 export function pad2(n) { return (n < 10 ? "0" : "") + n; }

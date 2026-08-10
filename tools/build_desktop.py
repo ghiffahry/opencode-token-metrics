@@ -27,9 +27,13 @@ ICON = APP_DIR / "app.ico"
 
 # (source, target) relative to the bundle directory.
 DATAS = [
-    (ROOT / "index.html", "."),
-    (ROOT / "static", "static"),
+    (ROOT / "web" / "index.html", "."),
+    (ROOT / "web" / "static", "static"),
     (APP_DIR / "app.ico", "."),
+]
+
+# Graph data is optional: included only when graphify-out/ exists.
+OPTIONAL_DATAS = [
     (ROOT / "graphify-out" / "graph.json", "graphify-out"),
     (ROOT / "graphify-out" / "views", "graphify-out/views"),
 ]
@@ -39,8 +43,8 @@ def check_prereqs():
     missing = []
     if not ENTRY.is_file():
         missing.append("app/desktop.py")
-    if not (ROOT / "index.html").is_file():
-        missing.append("index.html")
+    if not (ROOT / "web" / "index.html").is_file():
+        missing.append("web/index.html")
     if not ICON.is_file():
         missing.append("app/app.ico")
     for src, _ in DATAS:
@@ -68,7 +72,8 @@ def command():
         "--distpath", str(RUNTIME_DIR / "dist"),
         "--workpath", str(RUNTIME_DIR / "build"),
     ]
-    for src, dst in DATAS:
+    all_datas = DATAS + [d for d in OPTIONAL_DATAS if d[0].exists()]
+    for src, dst in all_datas:
         args += ["--add-data", "%s;%s" % (src, dst)]
     args.append(str(ENTRY))
     return args
