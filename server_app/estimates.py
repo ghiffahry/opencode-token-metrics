@@ -94,6 +94,3 @@ def estimate_composition(directory, input_total, req=None):
                  "(AGENTS.md/.rules/SKILL.md/opencode.json), the remainder as conversation/"
                  "workspace/retrieved." % input_total),
     }
-
-
-
