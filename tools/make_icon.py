@@ -1,14 +1,4 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""Generate the Token Metrics app icon: favicon.svg + app.ico.
-
-Design: rounded-square card with an indigo -> sky diagonal gradient and a
-white three-bar chart glyph (usage/metrics dashboard). The SVG is the web
-favicon; the ICO (multi-size) is used for the exe and the desktop window.
-"""
-
 from pathlib import Path
-
 from PIL import Image, ImageDraw
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -18,7 +8,7 @@ APP = ROOT / "app"
 INDIGO = (79, 70, 229)   # #4F46E5
 SKY = (14, 165, 233)     # #0EA5E9
 WHITE = (255, 255, 255)
-RADIUS = 0.21            # corner radius as fraction of size
+RADIUS = 0.21            
 
 BARS = ((96, 200, 100, 430), (206, 130, 100, 430), (316, 70, 100, 430))
 
