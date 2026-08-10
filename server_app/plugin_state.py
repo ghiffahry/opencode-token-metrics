@@ -1,13 +1,3 @@
-"""Read the opencode-token-metrics plugin state file.
-
-The plugin (opencode/plugins/token-metrics.js) captures token usage from
-opencode events and persists a small state.json. This module surfaces that
-file as a read-only API response so the dashboard shows what the plugin
-captured live, complementing the DB poll. If the plugin is not installed or
-has not written anything yet, `exists` is False and the UI just hides the
-section - no fake data.
-"""
-
 import json
 import os
 import time
@@ -24,7 +14,6 @@ def state_path():
 
 
 def plugin_state():
-    """Return the plugin state summary (cached by file mtime, TTL 5 s)."""
     path = state_path()
     if not path.is_file():
         return {"ok": True, "exists": False, "path": str(path)}
