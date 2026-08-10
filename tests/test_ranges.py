@@ -1,7 +1,4 @@
-"""Unit tests for server_app.ranges (no database required)."""
-
 import datetime
-
 import pytest
 
 from server_app import ranges
@@ -16,15 +13,12 @@ from server_app.ranges import (
     tzinfo,
 )
 
-
 @pytest.fixture(autouse=True)
 def utc_tz(monkeypatch):
-    """Pin the analytics timezone to UTC for deterministic assertions."""
     monkeypatch.setattr(ranges, "ANALYTICS_TZ", "UTC")
     ranges.tzinfo._cache.clear()
     yield
     ranges.tzinfo._cache.clear()
-
 
 def test_quota_window_invariants():
     now = datetime.datetime(2026, 8, 9, 10, 30, tzinfo=datetime.timezone.utc)
@@ -33,7 +27,6 @@ def test_quota_window_invariants():
     assert w["start"] <= now.timestamp() * 1000 < w["end"]
     assert w["estimated"] is True
     assert w["hours"] == 14
-
 
 def test_quota_window_reset_deterministic():
     now1 = datetime.datetime(2026, 8, 9, 4, 0, 1, tzinfo=datetime.timezone.utc)
