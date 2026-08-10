@@ -1,16 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""Export opencode aggregates to CSV from the CLI (no browser needed).
-
-Reads the database directly (same read-only queries as server_app), so the
-bridge does not need to be running.
-
-Usage:
-  py tools/export_csv.py --range 7d
-  py tools/export_csv.py --range 30d --project "C:/Users/you/projects/my-app"
-  py tools/export_csv.py --out runtime/exports
-"""
-
 import argparse
 import csv
 import json
@@ -18,9 +5,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from server_app.config import RANGES  # noqa: E402
-from server_app.overview import models, overview, requests_list  # noqa: E402
-
+from server_app.config import RANGES  
+from server_app.overview import models, overview, requests_list 
 
 def write(path, rows):
     path.parent.mkdir(parents=True, exist_ok=True)
