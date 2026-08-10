@@ -1,15 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""Build the Token Metrics desktop app with PyInstaller (onedir).
-
-Usage:
-  py tools/build_desktop.py            # dev mode: prints the command
-  py tools/build_desktop.py --build    # actually runs PyInstaller
-
-Output: runtime/dist/TokenMetrics/TokenMetrics.exe (windowed, no console).
-Requires: pip install pyinstaller pywebview
-"""
-
 import argparse
 import shutil
 import subprocess
@@ -25,14 +13,12 @@ NAME = "TokenMetrics"
 ENTRY = APP_DIR / "desktop.py"
 ICON = APP_DIR / "app.ico"
 
-# (source, target) relative to the bundle directory.
 DATAS = [
     (ROOT / "web" / "index.html", "."),
     (ROOT / "web" / "static", "static"),
     (APP_DIR / "app.ico", "."),
 ]
 
-# Graph data is optional: included only when graphify-out/ exists.
 OPTIONAL_DATAS = [
     (ROOT / "graphify-out" / "graph.json", "graphify-out"),
     (ROOT / "graphify-out" / "views", "graphify-out/views"),
