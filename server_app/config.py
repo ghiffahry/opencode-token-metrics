@@ -10,6 +10,18 @@ from pathlib import Path
 HOST = "127.0.0.1"
 PORT = 8124
 VERSION = "0.1.0"
+AUTH_TOKEN = os.environ.get("TOKENMETRICS_AUTH_TOKEN", "")
+
+
+def is_loopback(host):
+    """True for loopback bind addresses (no auth needed)."""
+    return host in ("127.0.0.1", "localhost", "::1") or str(host).startswith("127.")
+
+
+def set_auth_token(token):
+    """Set the API auth token at runtime (CLI --auth-token)."""
+    global AUTH_TOKEN
+    AUTH_TOKEN = token or ""
 
 
 def _base_dir():
