@@ -33,7 +33,7 @@ npm --prefix opencode run pack:check   # verify npm tarball contents
 - Plugin in `opencode/` stays dependency-light and never breaks the host.
 - UI strings may be localized; code and comments stay English.
 
-## Data validity (please keep honest)
+## Data validity
 
 - Database numbers = **actual historical** usage from `opencode.db`.
 - Quota windows = **estimates** (provider never publishes reset timing).
