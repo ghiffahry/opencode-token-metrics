@@ -1,9 +1,5 @@
 # Security Policy
 
-## Supported versions
-
-The project is in beta. Only the latest release on `master` is supported.
-
 ## Security model
 
 Token Metrics is a **local, read-only** observability tool:
